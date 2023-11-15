@@ -332,7 +332,10 @@ void main() {
       for (final int fps in <int>[10, 30]) {
         final CameraController controller = CameraController.withSettings(
           cameras.first,
-          mediaSettings: MediaSettings(fps: fps),
+          mediaSettings: MediaSettings(
+            resolutionPreset: ResolutionPreset.medium,
+            fps: fps,
+          ),
         );
         await controller.initialize();
         await controller.prepareForVideoRecording();
@@ -368,7 +371,10 @@ void main() {
       for (final int videoBitrate in <int>[100 * kiloBits, 1000 * kiloBits]) {
         final CameraController controller = CameraController.withSettings(
           cameras.first,
-          mediaSettings: MediaSettings(videoBitrate: videoBitrate),
+          mediaSettings: MediaSettings(
+            resolutionPreset: ResolutionPreset.medium,
+            videoBitrate: videoBitrate,
+          ),
         );
         await controller.initialize();
         await controller.prepareForVideoRecording();
