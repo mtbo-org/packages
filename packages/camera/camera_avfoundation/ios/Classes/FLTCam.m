@@ -41,9 +41,9 @@
                       AVCaptureAudioDataOutputSampleBufferDelegate>
 
 @property(readonly, nonatomic) int64_t textureId;
-@property(atomic, readwrite) int fps;
-@property(atomic, readwrite) int videoBitrate;
-@property(atomic, readwrite) int audioBitrate;
+@property(atomic, readwrite, strong) NSNumber *fps;
+@property(atomic, readwrite, strong) NSNumber *videoBitrate;
+@property(atomic, readwrite, strong) NSNumber *audioBitrate;
 @property BOOL enableAudio;
 @property(nonatomic) FLTImageStreamHandler *imageStreamHandler;
 @property(readonly, nonatomic) AVCaptureSession *videoCaptureSession;
@@ -97,9 +97,9 @@ NSString *const errorMethod = @"error";
 
 - (instancetype)initWithCameraName:(NSString *)cameraName
                   resolutionPreset:(NSString *)resolutionPreset
-                               fps:(int)fps
-                      videoBitrate:(int)videoBitrate
-                      audioBitrate:(int)audioBitrate
+                               fps:(NSNumber *)fps
+                      videoBitrate:(NSNumber *)videoBitrate
+                      audioBitrate:(NSNumber *)audioBitrate
                        enableAudio:(BOOL)enableAudio
                        orientation:(UIDeviceOrientation)orientation
                captureSessionQueue:(dispatch_queue_t)captureSessionQueue
@@ -119,9 +119,9 @@ NSString *const errorMethod = @"error";
 
 - (instancetype)initWithCameraName:(NSString *)cameraName
                   resolutionPreset:(NSString *)resolutionPreset
-                               fps:(int)fps
-                      videoBitrate:(int)videoBitrate
-                      audioBitrate:(int)audioBitrate
+                               fps:(NSNumber *)fps
+                      videoBitrate:(NSNumber *)videoBitrate
+                      audioBitrate:(NSNumber *)audioBitrate
                        enableAudio:(BOOL)enableAudio
                        orientation:(UIDeviceOrientation)orientation
                videoCaptureSession:(AVCaptureSession *)videoCaptureSession
@@ -141,9 +141,9 @@ NSString *const errorMethod = @"error";
                }];
     return nil;
   }
-  _fps = fps;
-  _videoBitrate = videoBitrate;
-  _audioBitrate = audioBitrate;
+  _fps = (!fps || [fps isEqual:[NSNull null]]) ? nil : fps;
+  _videoBitrate = (!videoBitrate || [videoBitrate isEqual:[NSNull null]]) ? nil : videoBitrate;
+  _audioBitrate = (!audioBitrate || [audioBitrate isEqual:[NSNull null]]) ? nil : audioBitrate;
   _enableAudio = enableAudio;
   _captureSessionQueue = captureSessionQueue;
   _pixelBufferSynchronizationQueue =
@@ -197,8 +197,8 @@ NSString *const errorMethod = @"error";
     }
 
     if (_fps) {
-      _captureDevice.activeVideoMinFrameDuration = CMTimeMake(1, _fps);
-      _captureDevice.activeVideoMaxFrameDuration = CMTimeMake(1, _fps);
+      _captureDevice.activeVideoMinFrameDuration = CMTimeMake(1, [_fps intValue]);
+      _captureDevice.activeVideoMaxFrameDuration = CMTimeMake(1, [_fps intValue]);
     }
 
     [_videoCaptureSession commitConfiguration];
@@ -1188,11 +1188,11 @@ NSString *const errorMethod = @"error";
     NSMutableDictionary *compressionProperties = [[NSMutableDictionary alloc] init];
 
     if (_videoBitrate) {
-      compressionProperties[AVVideoAverageBitRateKey] = @(_videoBitrate);
+      compressionProperties[AVVideoAverageBitRateKey] = _videoBitrate;
     }
 
     if (_fps) {
-      compressionProperties[AVVideoExpectedSourceFrameRateKey] = @(_fps);
+      compressionProperties[AVVideoExpectedSourceFrameRateKey] = _fps;
     }
 
     videoSettings[AVVideoCompressionPropertiesKey] = compressionProperties;
@@ -1224,7 +1224,7 @@ NSString *const errorMethod = @"error";
     } mutableCopy];
 
     if (_audioBitrate) {
-      audioOutputSettings[AVEncoderBitRateKey] = @(_audioBitrate);
+      audioOutputSettings[AVEncoderBitRateKey] = _audioBitrate;
     }
 
     _audioWriterInput = [AVAssetWriterInput assetWriterInputWithMediaType:AVMediaTypeAudio

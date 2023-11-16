@@ -48,9 +48,9 @@
 /// Allows for injecting dependencies that are usually internal.
 - (instancetype)initWithCameraName:(NSString *)cameraName
                   resolutionPreset:(NSString *)resolutionPreset
-                               fps:(int)fps
-                      videoBitrate:(int)videoBitrate
-                      audioBitrate:(int)audioBitrate
+                               fps:(NSNumber *)fps
+                      videoBitrate:(NSNumber *)videoBitrate
+                      audioBitrate:(NSNumber *)audioBitrate
                        enableAudio:(BOOL)enableAudio
                        orientation:(UIDeviceOrientation)orientation
                videoCaptureSession:(AVCaptureSession *)videoCaptureSession

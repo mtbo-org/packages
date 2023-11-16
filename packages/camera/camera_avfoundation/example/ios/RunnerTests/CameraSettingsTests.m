@@ -92,9 +92,9 @@ static const bool TEST_ENABLE_AUDIO = YES;
   NSError *error = nil;
   _camera = [[FLTCam alloc] initWithCameraName:@"camera"
                               resolutionPreset:@(TEST_RESOLUTION_PRESET)
-                                           fps:TEST_FPS
-                                  videoBitrate:TEST_VIDEO_BITRATE
-                                  audioBitrate:TEST_AUDIO_BITRATE
+                                           fps:@(TEST_FPS)
+                                  videoBitrate:@(TEST_VIDEO_BITRATE)
+                                  audioBitrate:@(TEST_AUDIO_BITRATE)
                                    enableAudio:TEST_ENABLE_AUDIO
                                    orientation:UIDeviceOrientationPortrait
                            videoCaptureSession:videoSessionMock
