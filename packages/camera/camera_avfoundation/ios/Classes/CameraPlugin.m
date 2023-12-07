@@ -295,6 +295,14 @@
   });
 }
 
+// Returns integer value if provided and positive, or zero if not specified or negative.
+NSNumber *unwrapOptional(NSNumber *number) {
+  int value = (!number || [number isEqual:[NSNull null]] || isnan([number doubleValue]))
+                  ? 0
+                  : [number intValue];
+  return value > 0 ? @(value) : nil;
+}
+
 - (void)createCameraOnSessionQueueWithCreateMethodCall:(FlutterMethodCall *)createMethodCall
                                                 result:(FLTThreadSafeFlutterResult *)result {
   __weak typeof(self) weakSelf = self;
@@ -303,9 +311,9 @@
     if (!strongSelf) return;
 
     NSString *cameraName = createMethodCall.arguments[@"cameraName"];
-    NSNumber *fps = createMethodCall.arguments[@"fps"];
-    NSNumber *videoBitrate = createMethodCall.arguments[@"videoBitrate"];
-    NSNumber *audioBitrate = createMethodCall.arguments[@"audioBitrate"];
+    NSNumber *fps = unwrapOptional(createMethodCall.arguments[@"fps"]);
+    NSNumber *videoBitrate = unwrapOptional(createMethodCall.arguments[@"videoBitrate"]);
+    NSNumber *audioBitrate = unwrapOptional(createMethodCall.arguments[@"audioBitrate"]);
     NSString *resolutionPreset = createMethodCall.arguments[@"resolutionPreset"];
     NSNumber *enableAudio = createMethodCall.arguments[@"enableAudio"];
     NSError *error;
