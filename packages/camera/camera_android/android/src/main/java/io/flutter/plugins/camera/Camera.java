@@ -313,7 +313,7 @@ class Camera
       mediaRecorderBuilder =
           new MediaRecorderBuilder(
               getRecordingProfile(),
-              new MediaRecorderBuilder.Parameters(
+              new MediaRecorderBuilder.RecordingParameters(
                   outputFilePath,
                   videoCaptureSettings.fps,
                   videoCaptureSettings.videoBitrate,
@@ -322,7 +322,7 @@ class Camera
       mediaRecorderBuilder =
           new MediaRecorderBuilder(
               getRecordingProfileLegacy(),
-              new MediaRecorderBuilder.Parameters(
+              new MediaRecorderBuilder.RecordingParameters(
                   outputFilePath,
                   videoCaptureSettings.fps,
                   videoCaptureSettings.videoBitrate,

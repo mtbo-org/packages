@@ -123,7 +123,6 @@ public class CameraTest {
   private RangeConstruction mockRangeConstruction;
 
   @Before
-  @SuppressWarnings("unchecked")
   public void before() {
 
     mockRangeConstruction = new RangeConstruction();
@@ -149,6 +148,9 @@ public class CameraTest {
         .when(() -> Camera.HandlerThreadFactory.create(any()))
         .thenReturn(mockHandlerThread);
 
+    // Use a wildcard, since `new Range<Integer>[] {...}`
+    // results in a 'Generic array creation' error.
+    @SuppressWarnings("unchecked")
     final Range<Integer>[] mockRanges =
         (Range<Integer>[]) new Range<?>[] {new Range<Integer>(10, 20)};
 
@@ -192,7 +194,6 @@ public class CameraTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   public void shouldCreateCameraPluginAndSetAllFeatures() {
     final Activity mockActivity = mock(Activity.class);
     final TextureRegistry.SurfaceTextureEntry mockFlutterTexture =
@@ -1196,7 +1197,6 @@ public class CameraTest {
   }
 
   @Test
-  @SuppressWarnings({"unchecked", "try", "rawtypes"})
   public void startVideoRecording_shouldApplySettingsToMediaRecorder()
       throws InterruptedException, IOException, CameraAccessException {
 
@@ -1219,6 +1219,9 @@ public class CameraTest {
         new Camera.VideoCaptureSettings(
             resolutionPreset, enableAudio, fps, videoBitrate, audioBitrate);
 
+    // Use a wildcard, since `new Range<Integer>[] {...}`
+    // results in a 'Generic array creation' error.
+    @SuppressWarnings("unchecked")
     final Range<Integer>[] mockRanges =
         (Range<Integer>[]) new Range<?>[] {new Range<Integer>(10, 20)};
 
@@ -1231,6 +1234,9 @@ public class CameraTest {
     try (final MockedStatic<File> mockFile = mockStatic(File.class);
         final MockedConstruction<MediaRecorder> mockMediaRecorder =
             Mockito.mockConstruction(MediaRecorder.class)) {
+
+      assertNotNull(mockMediaRecorder);
+
       mockFile
           .when(() -> File.createTempFile(any(), any(), any()))
           .thenReturn(new File("/tmp/file.mp4"));
@@ -1281,7 +1287,10 @@ public class CameraTest {
           (ResolutionFeature)
               TestUtils.getPrivateField(mockCameraFeatureFactory, "mockResolutionFeature");
 
+      assertNotNull(cameraFlutterTexture);
       when(cameraFlutterTexture.surfaceTexture()).thenReturn(mockSurfaceTexture);
+
+      assertNotNull(resolutionFeature);
       when(resolutionFeature.getPreviewSize()).thenReturn(mockSize);
 
       camera.startVideoRecording(mockResult, null);
@@ -1329,7 +1338,7 @@ public class CameraTest {
     @SuppressWarnings({"rawtypes"})
     final MockedConstruction<Range> rangeMockedConstruction;
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"unchecked"})
     public RangeConstruction() {
       this.rangeMockedConstruction =
           Mockito.mockConstruction(
