@@ -1216,7 +1216,8 @@ public class CameraTest {
     when(mockCameraProperties.getCameraName()).thenReturn(cameraName);
 
     final Camera.VideoCaptureSettings parameters =
-        new Camera.VideoCaptureSettings(resolutionPreset, enableAudio, fps, videoBitrate, audioBitrate);
+        new Camera.VideoCaptureSettings(
+            resolutionPreset, enableAudio, fps, videoBitrate, audioBitrate);
 
     final Range<Integer>[] mockRanges =
         (Range<Integer>[]) new Range<?>[] {new Range<Integer>(10, 20)};
@@ -1305,20 +1306,19 @@ public class CameraTest {
       verify(recorder).setVideoEncodingBitRate(videoBitrate);
       //endregion
     }
+  }
 
-    @Test
-    public void pausePreview_doesNotCallStopRepeatingWhenCameraClosed() throws CameraAccessException
-    {
-      ArrayList<CaptureRequest.Builder> mockRequestBuilders = new ArrayList<>();
-      mockRequestBuilders.add(mock(CaptureRequest.Builder.class));
-      CameraDeviceWrapper fakeCamera = new FakeCameraDeviceWrapper(mockRequestBuilders);
-      TestUtils.setPrivateField(camera, "cameraDevice", fakeCamera);
+  @Test
+  public void pausePreview_doesNotCallStopRepeatingWhenCameraClosed() throws CameraAccessException {
+    ArrayList<CaptureRequest.Builder> mockRequestBuilders = new ArrayList<>();
+    mockRequestBuilders.add(mock(CaptureRequest.Builder.class));
+    CameraDeviceWrapper fakeCamera = new FakeCameraDeviceWrapper(mockRequestBuilders);
+    TestUtils.setPrivateField(camera, "cameraDevice", fakeCamera);
 
-      camera.close();
-      camera.pausePreview();
+    camera.close();
+    camera.pausePreview();
 
-      verify(mockCaptureSession, never()).stopRepeating();
-    }
+    verify(mockCaptureSession, never()).stopRepeating();
   }
 
   /// Allow to use `new android.util.Range(Integer, Integer)`
