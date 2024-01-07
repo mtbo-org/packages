@@ -2,6 +2,10 @@
 
 * Adds support to control video FPS and bitrate. See `CameraController.withSettings`.
 
+## 0.10.8+16
+
+* Fixes new lint warnings.
+
 ## 0.10.8+15
 
 * Updates example app to use non-deprecated video_player method.
