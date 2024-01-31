@@ -506,7 +506,7 @@ class Optional<T> extends IterableBase<T> {
   /// Gets the Optional value.
   ///
   /// Throws [StateError] if [value] is null.
-  T get value {
+  T? get value {
     if (_value == null) {
       throw StateError('value called on absent Optional.');
     }
@@ -544,7 +544,7 @@ class Optional<T> extends IterableBase<T> {
   /// If the Optional is [absent()], returns [absent()] without applying the transformer.
   ///
   /// The transformer must not return `null`. If it does, an [ArgumentError] is thrown.
-  Optional<S> transform<S>(S Function(T value) transformer) {
+  Optional<S> transform<S>(S Function(T? value) transformer) {
     return _value == null
         ? Optional<S>.absent()
         : Optional<S>.of(transformer(_value));
@@ -555,7 +555,7 @@ class Optional<T> extends IterableBase<T> {
   /// If the Optional is [absent()], returns [absent()] without applying the transformer.
   ///
   /// Returns [absent()] if the transformer returns `null`.
-  Optional<S> transformNullable<S>(S? Function(T value) transformer) {
+  Optional<S> transformNullable<S>(S? Function(T? value) transformer) {
     return _value == null
         ? Optional<S>.absent()
         : Optional<S>.fromNullable(transformer(_value));

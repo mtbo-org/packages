@@ -295,8 +295,8 @@
   });
 }
 
-// Returns integer value if provided and positive, or zero if not specified or negative.
-NSNumber *unwrapOptional(NSNumber *number) {
+// Returns integer value if provided and positive, or nil if not specified or negative.
+NSNumber *toPositiveOrNull(NSNumber *number) {
   int value = (!number || [number isEqual:[NSNull null]] || isnan([number doubleValue]))
                   ? 0
                   : [number intValue];
@@ -311,9 +311,9 @@ NSNumber *unwrapOptional(NSNumber *number) {
     if (!strongSelf) return;
 
     NSString *cameraName = createMethodCall.arguments[@"cameraName"];
-    NSNumber *fps = unwrapOptional(createMethodCall.arguments[@"fps"]);
-    NSNumber *videoBitrate = unwrapOptional(createMethodCall.arguments[@"videoBitrate"]);
-    NSNumber *audioBitrate = unwrapOptional(createMethodCall.arguments[@"audioBitrate"]);
+    NSNumber *fps = toPositiveOrNull(createMethodCall.arguments[@"fps"]);
+    NSNumber *videoBitrate = toPositiveOrNull(createMethodCall.arguments[@"videoBitrate"]);
+    NSNumber *audioBitrate = toPositiveOrNull(createMethodCall.arguments[@"audioBitrate"]);
     NSString *resolutionPreset = createMethodCall.arguments[@"resolutionPreset"];
     NSNumber *enableAudio = createMethodCall.arguments[@"enableAudio"];
     NSError *error;

@@ -22,6 +22,30 @@ static const bool TEST_ENABLE_AUDIO = YES;
 
 @implementation CameraSettingsTests
 
+/// Expect that optional positive numbers can be parsed
+- (void)testParsingPositiveNumberOrNull {
+  // extern function from CameraPlugin.m
+  NSNumber *toPositiveOrNull(NSNumber * number);
+
+  NSNumber *negative = toPositiveOrNull(@(-100));
+  XCTAssertNil(negative, "negative number should be parsed as nil");
+
+  NSNumber *parsedNil = toPositiveOrNull(nil);
+  XCTAssertNil(parsedNil, "nil should be parsed as nil");
+
+  NSNumber *parsedFloat = toPositiveOrNull(@(3.7));
+  XCTAssertEqual(parsedFloat, @3, "float should be parsed as positive int");
+
+  NSNumber *parsedPositive = toPositiveOrNull(@(5));
+  XCTAssertEqual(parsedPositive, @5, "positive should be parsed as positive");
+
+  NSNumber *nullIsNull = toPositiveOrNull((NSNumber *)[NSNull null]);
+  XCTAssertNil(nullIsNull, "[NSNull null] should be parsed as nil");
+
+  NSNumber *nanIsNil = toPositiveOrNull(@(NAN));
+  XCTAssertNil(nanIsNil, "NAN should be parsed as nil");
+}
+
 /// Expect that FPS, video and audio bitrate are passed to camera device and asset writer.
 - (void)testSettings_shouldPassConfigurationToCameraDeviceAndWriter {
   XCTestExpectation *lockExpectation = [self expectationWithDescription:@"lockExpectation"];

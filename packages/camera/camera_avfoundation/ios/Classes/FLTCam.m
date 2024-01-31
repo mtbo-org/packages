@@ -187,27 +187,37 @@ NSString *const errorMethod = @"error";
   [_motionManager startAccelerometerUpdates];
 
   NSError *outError = nil;
-  if ([_captureDevice lockForConfiguration:&outError]) {
-    [_videoCaptureSession beginConfiguration];
 
-    if (![self setCaptureSessionPreset:_resolutionPreset withError:error]) {
-      [_videoCaptureSession commitConfiguration];
-      [_captureDevice unlockForConfiguration];
-      return nil;
-    }
+  if (_fps) {
+    // The frame rate can be changed only on a locked for configuration device.
+    if ([_captureDevice lockForConfiguration:&outError]) {
+      [_videoCaptureSession beginConfiguration];
 
-    if (_fps) {
+      // Possible values for presets are hard-coded in FLT interface having
+      // corresponding AVCaptureSessionPreset counterparts.
+      // If _resolutionPreset is not supported by camera there is
+      // fallback to lower resolution presets.
+      // If none can be selected there is error condition.
+      if (![self setCaptureSessionPreset:_resolutionPreset withError:error]) {
+        [_videoCaptureSession commitConfiguration];
+        [_captureDevice unlockForConfiguration];
+        return nil;
+      }
+
       _captureDevice.activeVideoMinFrameDuration = CMTimeMake(1, [_fps intValue]);
       _captureDevice.activeVideoMaxFrameDuration = CMTimeMake(1, [_fps intValue]);
-    }
 
-    [_videoCaptureSession commitConfiguration];
-    [_captureDevice unlockForConfiguration];
-  } else {
-    // tests always go there with outError == nil.
-    if (outError) {
+      [_videoCaptureSession commitConfiguration];
+      [_captureDevice unlockForConfiguration];
+    } else if (outError) {
       NSLog(@"error locking device for frame rate change (%@)", outError);
       *error = outError;
+      return nil;
+    }
+  } else {
+    // If the frame rate is not important fall to a less restrictive
+    // behavior (no configuration locking).
+    if (![self setCaptureSessionPreset:_resolutionPreset withError:error]) {
       return nil;
     }
   }
@@ -555,7 +565,6 @@ NSString *const errorMethod = @"error";
       return;
     }
 
-    CFRetain(sampleBuffer);
     CMTime currentSampleTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer);
 
     if (_videoWriter.status != AVAssetWriterStatusWriting) {
@@ -605,18 +614,18 @@ NSString *const errorMethod = @"error";
       _lastAudioSampleTime = currentSampleTime;
 
       if (_audioTimeOffset.value != 0) {
-        CFRelease(sampleBuffer);
-        sampleBuffer = [self adjustTime:sampleBuffer by:_audioTimeOffset];
+        CMSampleBufferRef adjustedSampleBuffer =
+            [self copySampleBufferWithAdjustedTime:sampleBuffer by:_audioTimeOffset];
+        [self newAudioSample:adjustedSampleBuffer];
+        CFRelease(adjustedSampleBuffer);
+      } else {
+        [self newAudioSample:sampleBuffer];
       }
-
-      [self newAudioSample:sampleBuffer];
     }
-
-    CFRelease(sampleBuffer);
   }
 }
 
-- (CMSampleBufferRef)adjustTime:(CMSampleBufferRef)sample by:(CMTime)offset CF_RETURNS_RETAINED {
+- (CMSampleBufferRef)copySampleBufferWithAdjustedTime:(CMSampleBufferRef)sample by:(CMTime)offset {
   CMItemCount count;
   CMSampleBufferGetSampleTimingInfoArray(sample, 0, nil, &count);
   CMSampleTimingInfo *pInfo = malloc(sizeof(CMSampleTimingInfo) * count);

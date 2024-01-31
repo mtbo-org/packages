@@ -1,7 +1,11 @@
-## 0.10.0
+## 0.9.15
 
 * Adds support to control video FPS and bitrate. See `CameraController.withSettings`.
-* Remove development team from example app.
+
+## 0.9.13+11
+
+* Fixes a memory leak of sample buffer when pause and resume the video recording.
+* Removes development team from example app.
 * Updates minimum iOS version to 12.0 and minimum Flutter version to 3.16.6.
 
 ## 0.9.13+10
