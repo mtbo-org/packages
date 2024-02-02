@@ -9,6 +9,7 @@
 #include <mfcaptureengine.h>
 #include <wrl/client.h>
 
+#include <cassert>
 #include <memory>
 #include <optional>
 #include <string>
@@ -46,7 +47,11 @@ struct RecordSettings {
       : record_audio(record_audio),
         fps(fps),
         video_bitrate(video_bitrate),
-        audio_bitrate(audio_bitrate) {}
+        audio_bitrate(audio_bitrate) {
+    assert(!fps.has_value() || fps.value() > 0);
+    assert(!video_bitrate.has_value() || video_bitrate.value() > 0);
+    assert(!audio_bitrate.has_value() || audio_bitrate.value() > 0);
+  }
 
   // Controls audio presence in recorded video.
   bool record_audio{false};

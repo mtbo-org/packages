@@ -171,7 +171,6 @@ class CameraValue {
 /// outside of the overall example code.
 class CameraController extends ValueNotifier<CameraValue> {
   /// Creates a new camera controller in an uninitialized state.
-  /// Deprecated, use [withSettings].
   factory CameraController(
     CameraDescription cameraDescription,
     ResolutionPreset resolutionPreset, {

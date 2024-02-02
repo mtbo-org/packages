@@ -117,6 +117,13 @@ NSString *const errorMethod = @"error";
                             error:error];
 }
 
+#define AssertPositiveNumberOrNil(param)                                                        \
+  if (param != nil) {                                                                           \
+    NSAssert([param isKindOfClass:NSNumber.class], @"%@ is not a number: %@", @ #param, param); \
+    NSAssert(!isnan([param doubleValue]), @"%@ is NaN", @ #param);                              \
+    NSAssert([param doubleValue] > 0, @"%@ is not positive: %@", @ #param, param);              \
+  }
+
 - (instancetype)initWithCameraName:(NSString *)cameraName
                   resolutionPreset:(NSString *)resolutionPreset
                                fps:(NSNumber *)fps
@@ -141,9 +148,14 @@ NSString *const errorMethod = @"error";
                }];
     return nil;
   }
-  _fps = (!fps || [fps isEqual:[NSNull null]]) ? nil : fps;
-  _videoBitrate = (!videoBitrate || [videoBitrate isEqual:[NSNull null]]) ? nil : videoBitrate;
-  _audioBitrate = (!audioBitrate || [audioBitrate isEqual:[NSNull null]]) ? nil : audioBitrate;
+
+  AssertPositiveNumberOrNil(fps);
+  AssertPositiveNumberOrNil(videoBitrate);
+  AssertPositiveNumberOrNil(audioBitrate);
+
+  _fps = fps;
+  _videoBitrate = videoBitrate;
+  _audioBitrate = audioBitrate;
   _enableAudio = enableAudio;
   _captureSessionQueue = captureSessionQueue;
   _pixelBufferSynchronizationQueue =
@@ -204,13 +216,13 @@ NSString *const errorMethod = @"error";
         return nil;
       }
 
-      _captureDevice.activeVideoMinFrameDuration = CMTimeMake(1, [_fps intValue]);
-      _captureDevice.activeVideoMaxFrameDuration = CMTimeMake(1, [_fps intValue]);
+      int fpsNominator = floor([_fps doubleValue] * 10.0);
+      _captureDevice.activeVideoMinFrameDuration = CMTimeMake(10, fpsNominator);
+      _captureDevice.activeVideoMaxFrameDuration = CMTimeMake(10, fpsNominator);
 
       [_videoCaptureSession commitConfiguration];
       [_captureDevice unlockForConfiguration];
     } else if (outError) {
-      NSLog(@"error locking device for frame rate change (%@)", outError);
       *error = outError;
       return nil;
     }

@@ -10,41 +10,66 @@
 #import "CameraTestUtils.h"
 #import "MockFLTThreadSafeFlutterResult.h"
 
-static const char *TEST_RESOLUTION_PRESET = "medium";
-static const int TEST_FPS = 15;
-static const int TEST_VIDEO_BITRATE = 200000;
-static const int TEST_AUDIO_BITRATE = 32000;
-static const bool TEST_ENABLE_AUDIO = YES;
+static const char *gTestResolutionPreset = "medium";
+static const int gTestFPS = 15;
+static const int gTestVideoBitrate = 200000;
+static const int gTestAudioBitrate = 32000;
+static const bool gTestEnableAudio = YES;
+
+@interface PositiveNumberOnNilTests : XCTestCase
+@end
+
+/// Expect that optional positive numbers can be parsed
+@implementation PositiveNumberOnNilTests
+
+- (void)testPositiveOrNilShouldRejectNegativeIntNumber {
+  NSError *error;
+  NSNumber *parsed = [CameraPlugin positiveOrNil:@(-100) error:&error];
+  XCTAssert(parsed == nil && error, "should reject negative int number");
+}
+
+- (void)testPositiveOrNilShouldRejectNegativeFloatingPointNumber {
+  NSError *error;
+  NSNumber *parsed = [CameraPlugin positiveOrNil:@(-3.7) error:&error];
+  XCTAssert(parsed == nil && error, "should accept positive floating point number");
+}
+
+- (void)testNanShouldBeParsedAsNil {
+  NSError *error;
+  NSNumber *parsed = [CameraPlugin positiveOrNil:@(NAN) error:&error];
+  XCTAssert(parsed == nil && error, "should reject NAN");
+}
+
+- (void)testPositiveOrNilShouldRejectNil {
+  NSError *error;
+  NSNumber *parsed = [CameraPlugin positiveOrNil:nil error:&error];
+  XCTAssert(parsed == nil && !error, "should accept nil");
+}
+
+- (void)testPositiveOrNilShouldAcceptNull {
+  NSError *error;
+  NSNumber *parsed = [CameraPlugin positiveOrNil:[NSNull null] error:&error];
+  XCTAssert(parsed == nil && !error, "should accept [NSNull null]");
+}
+
+- (void)testPositiveOrNilShouldAcceptPositiveFloatingPointNumber {
+  NSError *error;
+  NSNumber *parsed = [CameraPlugin positiveOrNil:@(3.7) error:&error];
+  XCTAssert(parsed != nil && !error, "should accept positive floating point number");
+}
+
+- (void)testPositiveOrNilShouldAcceptPositiveDecimalNumber {
+  NSError *error;
+  NSNumber *parsed = [CameraPlugin positiveOrNil:@(5) error:&error];
+  XCTAssert(parsed != nil && !error, "should parse positive int number");
+}
+
+@end
 
 @interface CameraSettingsTests : XCTestCase
-@property(readonly, nonatomic) FLTCam *camera;
 @end
 
 @implementation CameraSettingsTests
-
-/// Expect that optional positive numbers can be parsed
-- (void)testParsingPositiveNumberOrNull {
-  // extern function from CameraPlugin.m
-  NSNumber *toPositiveOrNull(NSNumber * number);
-
-  NSNumber *negative = toPositiveOrNull(@(-100));
-  XCTAssertNil(negative, "negative number should be parsed as nil");
-
-  NSNumber *parsedNil = toPositiveOrNull(nil);
-  XCTAssertNil(parsedNil, "nil should be parsed as nil");
-
-  NSNumber *parsedFloat = toPositiveOrNull(@(3.7));
-  XCTAssertEqual(parsedFloat, @3, "float should be parsed as positive int");
-
-  NSNumber *parsedPositive = toPositiveOrNull(@(5));
-  XCTAssertEqual(parsedPositive, @5, "positive should be parsed as positive");
-
-  NSNumber *nullIsNull = toPositiveOrNull((NSNumber *)[NSNull null]);
-  XCTAssertNil(nullIsNull, "[NSNull null] should be parsed as nil");
-
-  NSNumber *nanIsNil = toPositiveOrNull(@(NAN));
-  XCTAssertNil(nanIsNil, "NAN should be parsed as nil");
-}
 
 /// Expect that FPS, video and audio bitrate are passed to camera device and asset writer.
 - (void)testSettings_shouldPassConfigurationToCameraDeviceAndWriter {
@@ -73,11 +98,11 @@ static const bool TEST_ENABLE_AUDIO = YES;
   OCMStub([deviceMock unlockForConfiguration]).andDo(^(NSInvocation *invocation) {
     [unlockExpectation fulfill];
   });
-  OCMStub([deviceMock setActiveVideoMinFrameDuration:CMTimeMake(1, TEST_FPS)])
+  OCMStub([deviceMock setActiveVideoMinFrameDuration:CMTimeMake(10, gTestFPS * 10)])
       .andDo(^(NSInvocation *invocation) {
         [minFrameDurationExpectation fulfill];
       });
-  OCMStub([deviceMock setActiveVideoMaxFrameDuration:CMTimeMake(1, TEST_FPS)])
+  OCMStub([deviceMock setActiveVideoMaxFrameDuration:CMTimeMake(10, gTestFPS * 10)])
       .andDo(^(NSInvocation *invocation) {
         [maxFrameDurationExpectation fulfill];
       });
@@ -114,23 +139,21 @@ static const bool TEST_ENABLE_AUDIO = YES;
   OCMStub([captureVideoDataOutputMock sampleBufferCallbackQueue]).andReturn(captureSessionQueue);
 
   NSError *error = nil;
-  _camera = [[FLTCam alloc] initWithCameraName:@"camera"
-                              resolutionPreset:@(TEST_RESOLUTION_PRESET)
-                                           fps:@(TEST_FPS)
-                                  videoBitrate:@(TEST_VIDEO_BITRATE)
-                                  audioBitrate:@(TEST_AUDIO_BITRATE)
-                                   enableAudio:TEST_ENABLE_AUDIO
-                                   orientation:UIDeviceOrientationPortrait
-                           videoCaptureSession:videoSessionMock
-                           audioCaptureSession:audioSessionMock
-                           captureSessionQueue:captureSessionQueue
-                                         error:&error];
+  FLTCam *camera = [[FLTCam alloc] initWithCameraName:@"camera"
+                                     resolutionPreset:@(gTestResolutionPreset)
+                                                  fps:@(gTestFPS)
+                                         videoBitrate:@(gTestVideoBitrate)
+                                         audioBitrate:@(gTestAudioBitrate)
+                                          enableAudio:gTestEnableAudio
+                                          orientation:UIDeviceOrientationPortrait
+                                  videoCaptureSession:videoSessionMock
+                                  audioCaptureSession:audioSessionMock
+                                  captureSessionQueue:captureSessionQueue
+                                                error:&error];
 
-  XCTAssertNotNil(_camera, @"FLTCreateCamWithQueue should not be nil");
+  XCTAssertNotNil(camera, @"FLTCreateCamWithQueue should not be nil");
   XCTAssertNil(error, @"FLTCreateCamWithQueue should not return error: %@",
                error.localizedDescription);
-
-  id captureConnectionMock = OCMClassMock([AVCaptureConnection class]);
 
   id writerMock = OCMClassMock([AVAssetWriter class]);
   OCMStub([writerMock alloc]).andReturn(writerMock);
@@ -169,7 +192,7 @@ static const bool TEST_ENABLE_AUDIO = YES;
         NSMutableDictionary *args;
         [invocation getArgument:&args atIndex:3];
 
-        if ([args[AVEncoderBitRateKey] isEqual:@(TEST_AUDIO_BITRATE)]) {
+        if ([args[AVEncoderBitRateKey] isEqual:@(gTestAudioBitrate)]) {
           [audioSettingsExpectation fulfill];
         }
       })
@@ -186,9 +209,9 @@ static const bool TEST_ENABLE_AUDIO = YES;
         [invocation getArgument:&args atIndex:3];
 
         if ([args[AVVideoCompressionPropertiesKey][AVVideoAverageBitRateKey]
-                isEqual:@(TEST_VIDEO_BITRATE)] &&
+                isEqual:@(gTestVideoBitrate)] &&
             [args[AVVideoCompressionPropertiesKey][AVVideoExpectedSourceFrameRateKey]
-                isEqual:@(TEST_FPS)]) {
+                isEqual:@(gTestFPS)]) {
           [videoSettingsExpectation fulfill];
         }
       })
@@ -198,19 +221,9 @@ static const bool TEST_ENABLE_AUDIO = YES;
       [[FLTThreadSafeFlutterResult alloc] initWithResult:^(id result){
       }];
 
-  [_camera startVideoRecordingWithResult:result];
+  [camera startVideoRecordingWithResult:result];
 
   [self waitForExpectations:@[ audioSettingsExpectation, videoSettingsExpectation ] timeout:1];
-
-  [writerMock stopMocking];
-  [videoMock stopMocking];
-  [audioSessionMock stopMocking];
-  [captureConnectionMock stopMocking];
-  [captureVideoDataOutputMock stopMocking];
-  [audioSessionMock stopMocking];
-  [videoSessionMock stopMocking];
-  [inputMock stopMocking];
-  [deviceMock stopMocking];
 }
 
 - (void)testSettings_ShouldBeSupportedByMethodCall {
@@ -234,11 +247,11 @@ static const bool TEST_ENABLE_AUDIO = YES;
   FlutterMethodCall *call =
       [FlutterMethodCall methodCallWithMethodName:@"create"
                                         arguments:@{
-                                          @"resolutionPreset" : @(TEST_RESOLUTION_PRESET),
-                                          @"enableAudio" : @(TEST_ENABLE_AUDIO),
-                                          @"fps" : @(TEST_FPS),
-                                          @"videoBitrate" : @(TEST_VIDEO_BITRATE),
-                                          @"audioBitrate" : @(TEST_AUDIO_BITRATE)
+                                          @"resolutionPreset" : @(gTestResolutionPreset),
+                                          @"enableAudio" : @(gTestEnableAudio),
+                                          @"fps" : @(gTestFPS),
+                                          @"videoBitrate" : @(gTestVideoBitrate),
+                                          @"audioBitrate" : @(gTestAudioBitrate)
                                         }];
 
   [camera createCameraOnSessionQueueWithCreateMethodCall:call result:resultObject];
@@ -248,9 +261,6 @@ static const bool TEST_ENABLE_AUDIO = YES;
   NSDictionary *dictionaryResult = (NSDictionary *)resultObject.receivedResult;
   XCTAssertNotNil(dictionaryResult);
   XCTAssert([[dictionaryResult allKeys] containsObject:@"cameraId"]);
-
-  [avCaptureSessionMock stopMocking];
-  [avCaptureDeviceInputMock stopMocking];
 }
 
 @end
