@@ -295,12 +295,45 @@
   });
 }
 
-// Returns integer value if provided and positive, or nil if not specified or negative.
-NSNumber *toPositiveOrNull(NSNumber *number) {
-  int value = (!number || [number isEqual:[NSNull null]] || isnan([number doubleValue]))
-                  ? 0
-                  : [number intValue];
-  return value > 0 ? @(value) : nil;
+// Returns number value if provided and positive, or nil.
+// Used to parse values like framerates and bitrates, that are positive by nature.
+// nil allows to ignore unsupported values.
++ (NSNumber *)positiveOrNil:(id)number error:(NSError **)error {
+  if (!number || [number isEqual:[NSNull null]]) {
+    return nil;
+  }
+
+  if (![number isKindOfClass:[NSNumber class]]) {
+    if (error) {
+      *error = [NSError errorWithDomain:@"ArgumentError"
+                                   code:0
+                               userInfo:@{NSLocalizedDescriptionKey : @"should be a number"}];
+    }
+    return nil;
+  }
+
+  NSNumber *value = (NSNumber *)number;
+
+  if (isnan([value doubleValue])) {
+    if (error) {
+      *error = [NSError errorWithDomain:@"ArgumentError"
+                                   code:0
+                               userInfo:@{NSLocalizedDescriptionKey : @"should not be a nan"}];
+    }
+    return nil;
+  }
+
+  if ([value doubleValue] <= 0.0) {
+    if (error) {
+      *error =
+          [NSError errorWithDomain:@"ArgumentError"
+                              code:0
+                          userInfo:@{NSLocalizedDescriptionKey : @"should be a positive number"}];
+    }
+    return nil;
+  }
+
+  return value;
 }
 
 - (void)createCameraOnSessionQueueWithCreateMethodCall:(FlutterMethodCall *)createMethodCall
@@ -311,12 +344,31 @@ NSNumber *toPositiveOrNull(NSNumber *number) {
     if (!strongSelf) return;
 
     NSString *cameraName = createMethodCall.arguments[@"cameraName"];
-    NSNumber *fps = toPositiveOrNull(createMethodCall.arguments[@"fps"]);
-    NSNumber *videoBitrate = toPositiveOrNull(createMethodCall.arguments[@"videoBitrate"]);
-    NSNumber *audioBitrate = toPositiveOrNull(createMethodCall.arguments[@"audioBitrate"]);
+
+    NSError *error;
+
+    NSNumber *fps = [CameraPlugin positiveOrNil:createMethodCall.arguments[@"fps"] error:&error];
+    if (error) {
+      [result sendError:error];
+      return;
+    }
+
+    NSNumber *videoBitrate = [CameraPlugin positiveOrNil:createMethodCall.arguments[@"videoBitrate"]
+                                                   error:&error];
+    if (error) {
+      [result sendError:error];
+      return;
+    }
+
+    NSNumber *audioBitrate = [CameraPlugin positiveOrNil:createMethodCall.arguments[@"audioBitrate"]
+                                                   error:&error];
+    if (error) {
+      [result sendError:error];
+      return;
+    }
+
     NSString *resolutionPreset = createMethodCall.arguments[@"resolutionPreset"];
     NSNumber *enableAudio = createMethodCall.arguments[@"enableAudio"];
-    NSError *error;
     FLTCam *cam = [[FLTCam alloc] initWithCameraName:cameraName
                                     resolutionPreset:resolutionPreset
                                                  fps:fps

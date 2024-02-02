@@ -48,4 +48,8 @@
 - (void)createCameraOnSessionQueueWithCreateMethodCall:(FlutterMethodCall *)createMethodCall
                                                 result:(FLTThreadSafeFlutterResult *)result;
 
+/// Returns number value if provided and positive, or nil.
+/// Used to parse values like framerate and bitrate, that are positive by nature.
++ (NSNumber *)positiveOrNil:(id)number error:(NSError **)error;
+
 @end
