@@ -1,6 +1,7 @@
 ## 0.10.9
 
 * Adds support to control video FPS and bitrate. See `CameraController.withSettings`.
+* Updates compileSdk version to 34.
 
 ## 0.10.8+16
 
