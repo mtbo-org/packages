@@ -5,6 +5,7 @@
 #ifndef PACKAGES_CAMERA_CAMERA_WINDOWS_WINDOWS_RECORD_HANDLER_H_
 #define PACKAGES_CAMERA_CAMERA_WINDOWS_WINDOWS_RECORD_HANDLER_H_
 
+#include <cassert>
 #include <mfapi.h>
 #include <mfcaptureengine.h>
 #include <wrl/client.h>

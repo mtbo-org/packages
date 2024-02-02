@@ -261,9 +261,6 @@ static const bool gTestEnableAudio = YES;
   NSDictionary *dictionaryResult = (NSDictionary *)resultObject.receivedResult;
   XCTAssertNotNil(dictionaryResult);
   XCTAssert([[dictionaryResult allKeys] containsObject:@"cameraId"]);
-
-  [avCaptureSessionMock stopMocking];
-  [avCaptureDeviceInputMock stopMocking];
 }
 
 @end
