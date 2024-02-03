@@ -7,6 +7,18 @@
 @import AVFoundation;
 
 FLTCam *FLTCreateCamWithCaptureSessionQueue(dispatch_queue_t captureSessionQueue) {
+  return FLTCreateCamWithCaptureSessionQueueAndProvider(captureSessionQueue, nil);
+}
+
+FLTCam *FLTCreateCamWithCaptureSessionQueueAndProvider(
+    dispatch_queue_t captureSessionQueue, FLTCamMediaSettingsProvider *mediaSettingsProvider) {
+  if (!mediaSettingsProvider) {
+    mediaSettingsProvider = [[FLTCamMediaSettingsProvider alloc] initWithFps:nil
+                                                                videoBitrate:nil
+                                                                audioBitrate:nil
+                                                                 enableAudio:true];
+  }
+
   id inputMock = OCMClassMock([AVCaptureDeviceInput class]);
   OCMStub([inputMock deviceInputWithDevice:[OCMArg any] error:[OCMArg setTo:nil]])
       .andReturn(inputMock);
@@ -28,10 +40,7 @@ FLTCam *FLTCreateCamWithCaptureSessionQueue(dispatch_queue_t captureSessionQueue
 
   id fltCam = [[FLTCam alloc] initWithCameraName:@"camera"
                                 resolutionPreset:@"medium"
-                                             fps:nil
-                                    videoBitrate:nil
-                                    audioBitrate:nil
-                                     enableAudio:true
+                           mediaSettingsProvider:mediaSettingsProvider
                                      orientation:UIDeviceOrientationPortrait
                              videoCaptureSession:videoSessionMock
                              audioCaptureSession:audioSessionMock

@@ -41,10 +41,7 @@
                       AVCaptureAudioDataOutputSampleBufferDelegate>
 
 @property(readonly, nonatomic) int64_t textureId;
-@property(atomic, readwrite, strong) NSNumber *fps;
-@property(atomic, readwrite, strong) NSNumber *videoBitrate;
-@property(atomic, readwrite, strong) NSNumber *audioBitrate;
-@property BOOL enableAudio;
+@property(readonly, nonatomic) FLTCamMediaSettingsProvider *mediaSettingsProvider;
 @property(nonatomic) FLTImageStreamHandler *imageStreamHandler;
 @property(readonly, nonatomic) AVCaptureSession *videoCaptureSession;
 @property(readonly, nonatomic) AVCaptureSession *audioCaptureSession;
@@ -97,19 +94,13 @@ NSString *const errorMethod = @"error";
 
 - (instancetype)initWithCameraName:(NSString *)cameraName
                   resolutionPreset:(NSString *)resolutionPreset
-                               fps:(NSNumber *)fps
-                      videoBitrate:(NSNumber *)videoBitrate
-                      audioBitrate:(NSNumber *)audioBitrate
-                       enableAudio:(BOOL)enableAudio
+             mediaSettingsProvider:(FLTCamMediaSettingsProvider *)mediaSettingsProvider
                        orientation:(UIDeviceOrientation)orientation
                captureSessionQueue:(dispatch_queue_t)captureSessionQueue
                              error:(NSError **)error {
   return [self initWithCameraName:cameraName
                  resolutionPreset:resolutionPreset
-                              fps:fps
-                     videoBitrate:videoBitrate
-                     audioBitrate:audioBitrate
-                      enableAudio:enableAudio
+            mediaSettingsProvider:(FLTCamMediaSettingsProvider *)mediaSettingsProvider
                       orientation:orientation
               videoCaptureSession:[[AVCaptureSession alloc] init]
               audioCaptureSession:[[AVCaptureSession alloc] init]
@@ -117,19 +108,9 @@ NSString *const errorMethod = @"error";
                             error:error];
 }
 
-#define AssertPositiveNumberOrNil(param)                                                        \
-  if (param != nil) {                                                                           \
-    NSAssert([param isKindOfClass:NSNumber.class], @"%@ is not a number: %@", @ #param, param); \
-    NSAssert(!isnan([param doubleValue]), @"%@ is NaN", @ #param);                              \
-    NSAssert([param doubleValue] > 0, @"%@ is not positive: %@", @ #param, param);              \
-  }
-
 - (instancetype)initWithCameraName:(NSString *)cameraName
                   resolutionPreset:(NSString *)resolutionPreset
-                               fps:(NSNumber *)fps
-                      videoBitrate:(NSNumber *)videoBitrate
-                      audioBitrate:(NSNumber *)audioBitrate
-                       enableAudio:(BOOL)enableAudio
+             mediaSettingsProvider:(FLTCamMediaSettingsProvider *)mediaSettingsProvider
                        orientation:(UIDeviceOrientation)orientation
                videoCaptureSession:(AVCaptureSession *)videoCaptureSession
                audioCaptureSession:(AVCaptureSession *)audioCaptureSession
@@ -149,14 +130,8 @@ NSString *const errorMethod = @"error";
     return nil;
   }
 
-  AssertPositiveNumberOrNil(fps);
-  AssertPositiveNumberOrNil(videoBitrate);
-  AssertPositiveNumberOrNil(audioBitrate);
+  _mediaSettingsProvider = mediaSettingsProvider;
 
-  _fps = fps;
-  _videoBitrate = videoBitrate;
-  _audioBitrate = audioBitrate;
-  _enableAudio = enableAudio;
   _captureSessionQueue = captureSessionQueue;
   _pixelBufferSynchronizationQueue =
       dispatch_queue_create("io.flutter.camera.pixelBufferSynchronizationQueue", NULL);
@@ -164,6 +139,7 @@ NSString *const errorMethod = @"error";
   _videoCaptureSession = videoCaptureSession;
   _audioCaptureSession = audioCaptureSession;
   _captureDevice = [AVCaptureDevice deviceWithUniqueID:cameraName];
+
   _flashMode = _captureDevice.hasFlash ? FLTFlashModeAuto : FLTFlashModeOff;
   _exposureMode = FLTExposureModeAuto;
   _focusMode = FLTFocusModeAuto;
@@ -201,10 +177,10 @@ NSString *const errorMethod = @"error";
 
   NSError *outError = nil;
 
-  if (_fps) {
+  if (_mediaSettingsProvider.fps) {
     // The frame rate can be changed only on a locked for configuration device.
-    if ([_captureDevice lockForConfiguration:&outError]) {
-      [_videoCaptureSession beginConfiguration];
+    if ([mediaSettingsProvider lockDevice:_captureDevice error:&outError]) {
+      [_mediaSettingsProvider beginConfigurationForSession:_videoCaptureSession];
 
       // Possible values for presets are hard-coded in FLT interface having
       // corresponding AVCaptureSessionPreset counterparts.
@@ -217,12 +193,14 @@ NSString *const errorMethod = @"error";
         return nil;
       }
 
-      int fpsNominator = floor([_fps doubleValue] * 10.0);
-      _captureDevice.activeVideoMinFrameDuration = CMTimeMake(10, fpsNominator);
-      _captureDevice.activeVideoMaxFrameDuration = CMTimeMake(10, fpsNominator);
+      int fpsNominator = floor([_mediaSettingsProvider.fps doubleValue] * 10.0);
+      CMTime duration = CMTimeMake(10, fpsNominator);
 
-      [_videoCaptureSession commitConfiguration];
-      [_captureDevice unlockForConfiguration];
+      [mediaSettingsProvider setMinFrameDuration:duration onDevice:_captureDevice];
+      [mediaSettingsProvider setMaxFrameDuration:duration onDevice:_captureDevice];
+
+      [_mediaSettingsProvider commitConfigurationForSession:_videoCaptureSession];
+      [_mediaSettingsProvider unlockDevice:_captureDevice];
     } else if (outError) {
       *error = outError;
       return nil;
@@ -1208,7 +1186,8 @@ NSString *const errorMethod = @"error";
   } else {
     return NO;
   }
-  if (_enableAudio && !_isAudioSetup) {
+
+  if (_mediaSettingsProvider.enableAudio && !_isAudioSetup) {
     [self setUpCaptureSessionForAudio];
   }
 
@@ -1221,25 +1200,25 @@ NSString *const errorMethod = @"error";
     return NO;
   }
 
-  NSMutableDictionary *videoSettings = [[_captureVideoOutput
-      recommendedVideoSettingsForAssetWriterWithOutputFileType:AVFileTypeMPEG4] mutableCopy];
+  NSMutableDictionary *videoSettings =
+      [_mediaSettingsProvider recommendedVideoSettingsForOutput:_captureVideoOutput];
 
-  if (_videoBitrate || _fps) {
+  if (_mediaSettingsProvider.videoBitrate || _mediaSettingsProvider.fps) {
     NSMutableDictionary *compressionProperties = [[NSMutableDictionary alloc] init];
 
-    if (_videoBitrate) {
-      compressionProperties[AVVideoAverageBitRateKey] = _videoBitrate;
+    if (_mediaSettingsProvider.videoBitrate) {
+      compressionProperties[AVVideoAverageBitRateKey] = _mediaSettingsProvider.videoBitrate;
     }
 
-    if (_fps) {
-      compressionProperties[AVVideoExpectedSourceFrameRateKey] = _fps;
+    if (_mediaSettingsProvider.fps) {
+      compressionProperties[AVVideoExpectedSourceFrameRateKey] = _mediaSettingsProvider.fps;
     }
 
     videoSettings[AVVideoCompressionPropertiesKey] = compressionProperties;
   }
 
-  _videoWriterInput = [AVAssetWriterInput assetWriterInputWithMediaType:AVMediaTypeVideo
-                                                         outputSettings:videoSettings];
+  _videoWriterInput =
+      [_mediaSettingsProvider assetWriterVideoInputWithOutputSettings:videoSettings];
 
   _videoAdaptor = [AVAssetWriterInputPixelBufferAdaptor
       assetWriterInputPixelBufferAdaptorWithAssetWriterInput:_videoWriterInput
@@ -1252,7 +1231,7 @@ NSString *const errorMethod = @"error";
   _videoWriterInput.expectsMediaDataInRealTime = YES;
 
   // Add the audio input
-  if (_enableAudio) {
+  if (_mediaSettingsProvider.enableAudio) {
     AudioChannelLayout acl;
     bzero(&acl, sizeof(acl));
     acl.mChannelLayoutTag = kAudioChannelLayoutTag_Mono;
@@ -1263,15 +1242,16 @@ NSString *const errorMethod = @"error";
       AVChannelLayoutKey : [NSData dataWithBytes:&acl length:sizeof(acl)],
     } mutableCopy];
 
-    if (_audioBitrate) {
-      audioOutputSettings[AVEncoderBitRateKey] = _audioBitrate;
+    if (_mediaSettingsProvider.audioBitrate) {
+      audioOutputSettings[AVEncoderBitRateKey] = _mediaSettingsProvider.audioBitrate;
     }
 
-    _audioWriterInput = [AVAssetWriterInput assetWriterInputWithMediaType:AVMediaTypeAudio
-                                                           outputSettings:audioOutputSettings];
+    _audioWriterInput =
+        [_mediaSettingsProvider assetWriterAudioInputWithOutputSettings:audioOutputSettings];
+
     _audioWriterInput.expectsMediaDataInRealTime = YES;
 
-    [_videoWriter addInput:_audioWriterInput];
+    [_mediaSettingsProvider addInput:_audioWriterInput toAssetWriter:_videoWriter];
     [_audioOutput setSampleBufferDelegate:self queue:_captureSessionQueue];
   }
 
@@ -1281,7 +1261,7 @@ NSString *const errorMethod = @"error";
     [self.captureDevice unlockForConfiguration];
   }
 
-  [_videoWriter addInput:_videoWriterInput];
+  [_mediaSettingsProvider addInput:_videoWriterInput toAssetWriter:_videoWriter];
 
   [_captureVideoOutput setSampleBufferDelegate:self queue:_captureSessionQueue];
 
@@ -1319,4 +1299,76 @@ NSString *const errorMethod = @"error";
     }
   }
 }
+@end
+
+@implementation FLTCamMediaSettingsProvider
+
+#define AssertPositiveNumberOrNil(param)                                                        \
+  if (param != nil) {                                                                           \
+    NSAssert([param isKindOfClass:NSNumber.class], @"%@ is not a number: %@", @ #param, param); \
+    NSAssert(!isnan([param doubleValue]), @"%@ is NaN", @ #param);                              \
+    NSAssert([param doubleValue] > 0, @"%@ is not positive: %@", @ #param, param);              \
+  }
+
+- (instancetype)initWithFps:(nullable NSNumber *)fps
+               videoBitrate:(nullable NSNumber *)videoBitrate
+               audioBitrate:(nullable NSNumber *)audioBitrate
+                enableAudio:(BOOL)enableAudio {
+  AssertPositiveNumberOrNil(fps);
+  AssertPositiveNumberOrNil(videoBitrate);
+  AssertPositiveNumberOrNil(audioBitrate);
+
+  _fps = fps;
+  _videoBitrate = videoBitrate;
+  _audioBitrate = audioBitrate;
+  _enableAudio = enableAudio;
+
+  return self;
+}
+
+- (BOOL)lockDevice:(AVCaptureDevice *)captureDevice error:(NSError **)outError {
+  return [captureDevice lockForConfiguration:outError];
+}
+
+- (void)unlockDevice:(AVCaptureDevice *)captureDevice {
+  return [captureDevice unlockForConfiguration];
+}
+
+- (void)beginConfigurationForSession:(AVCaptureSession *)videoCaptureSession {
+  [videoCaptureSession beginConfiguration];
+}
+
+- (void)commitConfigurationForSession:(AVCaptureSession *)videoCaptureSession {
+  [videoCaptureSession commitConfiguration];
+}
+
+- (void)setMinFrameDuration:(CMTime)duration onDevice:(AVCaptureDevice *)captureDevice {
+  captureDevice.activeVideoMinFrameDuration = duration;
+}
+
+- (void)setMaxFrameDuration:(CMTime)duration onDevice:(AVCaptureDevice *)captureDevice {
+  captureDevice.activeVideoMaxFrameDuration = duration;
+}
+
+- (AVAssetWriterInput *)assetWriterAudioInputWithOutputSettings:
+    (nullable NSDictionary<NSString *, id> *)outputSettings {
+  return [AVAssetWriterInput assetWriterInputWithMediaType:AVMediaTypeAudio
+                                            outputSettings:outputSettings];
+}
+
+- (AVAssetWriterInput *)assetWriterVideoInputWithOutputSettings:
+    (nullable NSDictionary<NSString *, id> *)outputSettings {
+  return [AVAssetWriterInput assetWriterInputWithMediaType:AVMediaTypeVideo
+                                            outputSettings:outputSettings];
+}
+
+- (void)addInput:(AVAssetWriterInput *)writerInput toAssetWriter:(AVAssetWriter *)writer {
+  [writer addInput:writerInput];
+}
+
+- (NSMutableDictionary *)recommendedVideoSettingsForOutput:(AVCaptureVideoDataOutput *)output {
+  return [[output recommendedVideoSettingsForAssetWriterWithOutputFileType:AVFileTypeMPEG4]
+      mutableCopy];
+}
+
 @end
