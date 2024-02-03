@@ -69,153 +69,128 @@ static const bool gTestEnableAudio = YES;
 @interface CameraSettingsTests : XCTestCase
 @end
 
+@interface TestMediaSettingsProvider : FLTCamMediaSettingsProvider
+@property(nonatomic, readonly) XCTestExpectation *lockExpectation;
+@property(nonatomic, readonly) XCTestExpectation *unlockExpectation;
+@property(nonatomic, readonly) XCTestExpectation *minFrameDurationExpectation;
+@property(nonatomic, readonly) XCTestExpectation *maxFrameDurationExpectation;
+@property(nonatomic, readonly) XCTestExpectation *beginConfigurationExpectation;
+@property(nonatomic, readonly) XCTestExpectation *commitConfigurationExpectation;
+@property(nonatomic, readonly) XCTestExpectation *audioSettingsExpectation;
+@property(nonatomic, readonly) XCTestExpectation *videoSettingsExpectation;
+@end
+
+@implementation TestMediaSettingsProvider
+
+- (instancetype)initWithTestCase:(XCTestCase *)test
+                             fps:(nullable NSNumber *)fps
+                    videoBitrate:(nullable NSNumber *)videoBitrate
+                    audioBitrate:(nullable NSNumber *)audioBitrate
+                     enableAudio:(BOOL)enableAudio {
+  self = [self initWithFps:fps
+              videoBitrate:videoBitrate
+              audioBitrate:audioBitrate
+               enableAudio:enableAudio];
+
+  _lockExpectation = [test expectationWithDescription:@"lockExpectation"];
+  _unlockExpectation = [test expectationWithDescription:@"unlockExpectation"];
+  _minFrameDurationExpectation = [test expectationWithDescription:@"minFrameDurationExpectation"];
+  _maxFrameDurationExpectation = [test expectationWithDescription:@"maxFrameDurationExpectation"];
+  _beginConfigurationExpectation =
+      [test expectationWithDescription:@"beginConfigurationExpectation"];
+  _commitConfigurationExpectation =
+      [test expectationWithDescription:@"commitConfigurationExpectation"];
+  _audioSettingsExpectation = [test expectationWithDescription:@"audioSettingsExpectation"];
+  _videoSettingsExpectation = [test expectationWithDescription:@"videoSettingsExpectation"];
+
+  return self;
+}
+
+- (BOOL)lockDevice:(AVCaptureDevice *)captureDevice error:(NSError **)outError {
+  [_lockExpectation fulfill];
+  return YES;
+}
+
+- (void)unlockDevice:(AVCaptureDevice *)captureDevice {
+  [_unlockExpectation fulfill];
+}
+
+- (void)beginConfigurationForSession:(AVCaptureSession *)videoCaptureSession {
+  [_beginConfigurationExpectation fulfill];
+}
+
+- (void)commitConfigurationForSession:(AVCaptureSession *)videoCaptureSession {
+  [_commitConfigurationExpectation fulfill];
+}
+
+- (void)setMinFrameDuration:(CMTime)duration onDevice:(AVCaptureDevice *)captureDevice {
+  if (duration.value == 10 && duration.timescale == gTestFPS * 10) {
+    [_minFrameDurationExpectation fulfill];
+  }
+}
+
+- (void)setMaxFrameDuration:(CMTime)duration onDevice:(AVCaptureDevice *)captureDevice {
+  if (duration.value == 10 && duration.timescale == gTestFPS * 10) {
+    [_maxFrameDurationExpectation fulfill];
+  }
+}
+
+- (AVAssetWriterInput *)assetWriterAudioInputWithOutputSettings:
+    (nullable NSDictionary<NSString *, id> *)outputSettings {
+  if ([outputSettings[AVEncoderBitRateKey] isEqual:@(gTestAudioBitrate)]) {
+    [_audioSettingsExpectation fulfill];
+  }
+
+  return [AVAssetWriterInput assetWriterInputWithMediaType:AVMediaTypeAudio
+                                            outputSettings:outputSettings];
+}
+
+- (AVAssetWriterInput *)assetWriterVideoInputWithOutputSettings:
+    (nullable NSDictionary<NSString *, id> *)outputSettings {
+  if ([outputSettings[AVVideoCompressionPropertiesKey] isKindOfClass:NSMutableDictionary.class]) {
+    NSDictionary *compressionProperties = outputSettings[AVVideoCompressionPropertiesKey];
+
+    if ([compressionProperties[AVVideoAverageBitRateKey] isEqual:@(gTestVideoBitrate)] &&
+        [compressionProperties[AVVideoExpectedSourceFrameRateKey] isEqual:@(gTestFPS)]) {
+      [_videoSettingsExpectation fulfill];
+    }
+  }
+
+  return [AVAssetWriterInput assetWriterInputWithMediaType:AVMediaTypeVideo
+                                            outputSettings:outputSettings];
+}
+
+- (void)addInput:(AVAssetWriterInput *)writerInput toAssetWriter:(AVAssetWriter *)writer {
+}
+
+- (NSMutableDictionary *)recommendedVideoSettingsForOutput:(AVCaptureVideoDataOutput *)output {
+  return [NSMutableDictionary new];
+}
+
+@end
+
 @implementation CameraSettingsTests
 
 /// Expect that FPS, video and audio bitrate are passed to camera device and asset writer.
 - (void)testSettings_shouldPassConfigurationToCameraDeviceAndWriter {
-  XCTestExpectation *lockExpectation = [self expectationWithDescription:@"lockExpectation"];
-  XCTestExpectation *unlockExpectation = [self expectationWithDescription:@"unlockExpectation"];
-  XCTestExpectation *minFrameDurationExpectation =
-      [self expectationWithDescription:@"minFrameDurationExpectation"];
-  XCTestExpectation *maxFrameDurationExpectation =
-      [self expectationWithDescription:@"maxFrameDurationExpectation"];
-  XCTestExpectation *beginConfigurationExpectation =
-      [self expectationWithDescription:@"beginConfigurationExpectation"];
-  XCTestExpectation *commitConfigurationExpectation =
-      [self expectationWithDescription:@"commitConfigurationExpectation"];
+  TestMediaSettingsProvider *injectedProvider =
+      [[TestMediaSettingsProvider alloc] initWithTestCase:self
+                                                      fps:@(gTestFPS)
+                                             videoBitrate:@(gTestVideoBitrate)
+                                             audioBitrate:@(gTestAudioBitrate)
+                                              enableAudio:gTestEnableAudio];
 
-  dispatch_queue_t captureSessionQueue = dispatch_queue_create("testing", NULL);
-
-  id deviceMock = [OCMockObject niceMockForClass:[AVCaptureDevice class]];
-
-  OCMStub([deviceMock deviceWithUniqueID:[OCMArg any]]).andReturn(deviceMock);
-
-  OCMStub([deviceMock lockForConfiguration:[OCMArg setTo:nil]])
-      .andDo(^(NSInvocation *invocation) {
-        [lockExpectation fulfill];
-      })
-      .andReturn(YES);
-  OCMStub([deviceMock unlockForConfiguration]).andDo(^(NSInvocation *invocation) {
-    [unlockExpectation fulfill];
-  });
-  OCMStub([deviceMock setActiveVideoMinFrameDuration:CMTimeMake(10, gTestFPS * 10)])
-      .andDo(^(NSInvocation *invocation) {
-        [minFrameDurationExpectation fulfill];
-      });
-  OCMStub([deviceMock setActiveVideoMaxFrameDuration:CMTimeMake(10, gTestFPS * 10)])
-      .andDo(^(NSInvocation *invocation) {
-        [maxFrameDurationExpectation fulfill];
-      });
-
-  OCMStub([deviceMock devices]).andReturn(@[ deviceMock ]);
-
-  id inputMock = OCMClassMock([AVCaptureDeviceInput class]);
-  OCMStub([inputMock deviceInputWithDevice:[OCMArg any] error:[OCMArg setTo:nil]])
-      .andReturn(inputMock);
-
-  id videoSessionMock = OCMClassMock([AVCaptureSession class]);
-  OCMStub([videoSessionMock beginConfiguration]).andDo(^(NSInvocation *invocation) {
-    [beginConfigurationExpectation fulfill];
-  });
-  OCMStub([videoSessionMock commitConfiguration]).andDo(^(NSInvocation *invocation) {
-    [commitConfigurationExpectation fulfill];
-  });
-
-  OCMStub([videoSessionMock addInputWithNoConnections:[OCMArg any]]);  // no-op
-  OCMStub([videoSessionMock canSetSessionPreset:[OCMArg any]]).andReturn(YES);
-
-  id audioSessionMock = OCMClassMock([AVCaptureSession class]);
-  OCMStub([audioSessionMock addInputWithNoConnections:[OCMArg any]]);  // no-op
-  OCMStub([audioSessionMock canSetSessionPreset:[OCMArg any]]).andReturn(YES);
-
-  id captureVideoDataOutputMock = [OCMockObject niceMockForClass:[AVCaptureVideoDataOutput class]];
-
-  OCMStub([captureVideoDataOutputMock new]).andReturn(captureVideoDataOutputMock);
-
-  OCMStub([captureVideoDataOutputMock
-              recommendedVideoSettingsForAssetWriterWithOutputFileType:AVFileTypeMPEG4])
-      .andReturn(@{});
-
-  OCMStub([captureVideoDataOutputMock sampleBufferCallbackQueue]).andReturn(captureSessionQueue);
-
-  NSError *error = nil;
-  FLTCam *camera = [[FLTCam alloc] initWithCameraName:@"camera"
-                                     resolutionPreset:@(gTestResolutionPreset)
-                                                  fps:@(gTestFPS)
-                                         videoBitrate:@(gTestVideoBitrate)
-                                         audioBitrate:@(gTestAudioBitrate)
-                                          enableAudio:gTestEnableAudio
-                                          orientation:UIDeviceOrientationPortrait
-                                  videoCaptureSession:videoSessionMock
-                                  audioCaptureSession:audioSessionMock
-                                  captureSessionQueue:captureSessionQueue
-                                                error:&error];
-
-  XCTAssertNotNil(camera, @"FLTCreateCamWithQueue should not be nil");
-  XCTAssertNil(error, @"FLTCreateCamWithQueue should not return error: %@",
-               error.localizedDescription);
-
-  id writerMock = OCMClassMock([AVAssetWriter class]);
-  OCMStub([writerMock alloc]).andReturn(writerMock);
-  OCMStub([writerMock initWithURL:OCMOCK_ANY fileType:OCMOCK_ANY error:[OCMArg setTo:nil]])
-      .andReturn(writerMock);
-  __block AVAssetWriterStatus status = AVAssetWriterStatusUnknown;
-  OCMStub([writerMock startWriting]).andDo(^(NSInvocation *invocation) {
-    status = AVAssetWriterStatusWriting;
-  });
-  OCMStub([writerMock status]).andDo(^(NSInvocation *invocation) {
-    [invocation setReturnValue:&status];
-  });
+  FLTCam *camera = FLTCreateCamWithCaptureSessionQueueAndProvider(
+      dispatch_queue_create("test", NULL), injectedProvider);
 
   // Expect FPS configuration is passed to camera device.
   [self waitForExpectations:@[
-    lockExpectation, beginConfigurationExpectation, minFrameDurationExpectation,
-    maxFrameDurationExpectation, commitConfigurationExpectation, unlockExpectation
+    injectedProvider.lockExpectation, injectedProvider.beginConfigurationExpectation,
+    injectedProvider.minFrameDurationExpectation, injectedProvider.maxFrameDurationExpectation,
+    injectedProvider.commitConfigurationExpectation, injectedProvider.unlockExpectation
   ]
                     timeout:1
                enforceOrder:YES];
-
-  id videoMock = OCMClassMock([AVAssetWriterInputPixelBufferAdaptor class]);
-  OCMStub([videoMock assetWriterInputPixelBufferAdaptorWithAssetWriterInput:OCMOCK_ANY
-                                                sourcePixelBufferAttributes:OCMOCK_ANY])
-      .andReturn(videoMock);
-
-  id writerInputMock = [OCMockObject niceMockForClass:[AVAssetWriterInput class]];
-
-  // Expect audio bitrate is passed to writer.
-  XCTestExpectation *audioSettingsExpectation =
-      [self expectationWithDescription:@"audioSettingsExpectation"];
-
-  OCMStub([writerInputMock assetWriterInputWithMediaType:AVMediaTypeAudio
-                                          outputSettings:[OCMArg any]])
-      .andDo(^(NSInvocation *invocation) {
-        NSMutableDictionary *args;
-        [invocation getArgument:&args atIndex:3];
-
-        if ([args[AVEncoderBitRateKey] isEqual:@(gTestAudioBitrate)]) {
-          [audioSettingsExpectation fulfill];
-        }
-      })
-      .andReturn(writerInputMock);
-
-  // Expect FPS and video bitrate are passed to writer.
-  XCTestExpectation *videoSettingsExpectation =
-      [self expectationWithDescription:@"videoSettingsExpectation"];
-
-  OCMStub([writerInputMock assetWriterInputWithMediaType:AVMediaTypeVideo
-                                          outputSettings:[OCMArg any]])
-      .andDo(^(NSInvocation *invocation) {
-        NSMutableDictionary *args;
-        [invocation getArgument:&args atIndex:3];
-
-        if ([args[AVVideoCompressionPropertiesKey][AVVideoAverageBitRateKey]
-                isEqual:@(gTestVideoBitrate)] &&
-            [args[AVVideoCompressionPropertiesKey][AVVideoExpectedSourceFrameRateKey]
-                isEqual:@(gTestFPS)]) {
-          [videoSettingsExpectation fulfill];
-        }
-      })
-      .andReturn(writerInputMock);
 
   FLTThreadSafeFlutterResult *result =
       [[FLTThreadSafeFlutterResult alloc] initWithResult:^(id result){
@@ -223,7 +198,10 @@ static const bool gTestEnableAudio = YES;
 
   [camera startVideoRecordingWithResult:result];
 
-  [self waitForExpectations:@[ audioSettingsExpectation, videoSettingsExpectation ] timeout:1];
+  [self waitForExpectations:@[
+    injectedProvider.audioSettingsExpectation, injectedProvider.videoSettingsExpectation
+  ]
+                    timeout:1];
 }
 
 - (void)testSettings_ShouldBeSupportedByMethodCall {
