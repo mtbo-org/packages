@@ -7,41 +7,14 @@
 @import Flutter;
 
 #import "CameraProperties.h"
+#import "FLTCamMediaSettings.h"
+#import "FLTCamMediaSettingsAVWrapper.h"
 #import "FLTThreadSafeEventChannel.h"
 #import "FLTThreadSafeFlutterResult.h"
 #import "FLTThreadSafeMethodChannel.h"
 #import "FLTThreadSafeTextureRegistry.h"
 
 NS_ASSUME_NONNULL_BEGIN
-
-/**
- * A class that manages media settings state and performs media settings operations.
- */
-@interface FLTCamMediaSettingsProvider : NSObject
-
-@property(atomic, readonly, strong) NSNumber *fps;
-@property(atomic, readonly, strong) NSNumber *videoBitrate;
-@property(atomic, readonly, strong) NSNumber *audioBitrate;
-@property(atomic, readonly) BOOL enableAudio;
-
-- (instancetype)initWithFps:(nullable NSNumber *)fps
-               videoBitrate:(nullable NSNumber *)videoBitrate
-               audioBitrate:(nullable NSNumber *)audioBitrate
-                enableAudio:(BOOL)enableAudio;
-
-- (BOOL)lockDevice:(nonnull AVCaptureDevice *)captureDevice error:(NSError **)outError;
-- (void)unlockDevice:(nonnull AVCaptureDevice *)captureDevice;
-- (void)beginConfigurationForSession:(nonnull AVCaptureSession *)videoCaptureSession;
-- (void)commitConfigurationForSession:(nonnull AVCaptureSession *)videoCaptureSession;
-- (void)setMinFrameDuration:(CMTime)duration onDevice:(nonnull AVCaptureDevice *)captureDevice;
-- (void)setMaxFrameDuration:(CMTime)duration onDevice:(nonnull AVCaptureDevice *)captureDevice;
-- (AVAssetWriterInput *)assetWriterAudioInputWithOutputSettings:
-    (nullable NSDictionary<NSString *, id> *)outputSettings;
-- (AVAssetWriterInput *)assetWriterVideoInputWithOutputSettings:
-    (nullable NSDictionary<NSString *, id> *)outputSettings;
-- (void)addInput:(AVAssetWriterInput *)writerInput toAssetWriter:(AVAssetWriter *)writer;
-- (NSMutableDictionary *)recommendedVideoSettingsForOutput:(AVCaptureVideoDataOutput *)output;
-@end
 
 /**
  * A class that manages camera's state and performs camera operations.
@@ -64,14 +37,16 @@ NS_ASSUME_NONNULL_BEGIN
 /// Initializes an `FLTCam` instance.
 /// @param cameraName a name used to uniquely identify the camera.
 /// @param resolutionPreset the resolution preset
-/// @param mediaSettingsProvider provider to perform media settings related operations (for
-/// dependency injection in unit tests).
+/// @param mediaSettings the media settings configuration parameters
+/// @param mediaSettingsAVWrapper AVFoundation wrapper to perform media settings related operations
+/// (for dependency injection in unit tests).
 /// @param orientation the orientation of camera
 /// @param captureSessionQueue the queue on which camera's capture session operations happen.
 /// @param error report to the caller if any error happened creating the camera.
 - (instancetype)initWithCameraName:(NSString *)cameraName
                   resolutionPreset:(NSString *)resolutionPreset
-             mediaSettingsProvider:(FLTCamMediaSettingsProvider *)mediaSettingsProvider
+                     mediaSettings:(FLTCamMediaSettings *)mediaSettings
+            mediaSettingsAVWrapper:(FLTCamMediaSettingsAVWrapper *)mediaSettingsAVWrapper
                        orientation:(UIDeviceOrientation)orientation
                captureSessionQueue:(dispatch_queue_t)captureSessionQueue
                              error:(NSError **)error;

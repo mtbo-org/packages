@@ -7,16 +7,21 @@
 @import AVFoundation;
 
 FLTCam *FLTCreateCamWithCaptureSessionQueue(dispatch_queue_t captureSessionQueue) {
-  return FLTCreateCamWithCaptureSessionQueueAndProvider(captureSessionQueue, nil);
+  return FLTCreateCamWithCaptureSessionQueueAndMediaSettings(captureSessionQueue, nil, nil);
 }
 
-FLTCam *FLTCreateCamWithCaptureSessionQueueAndProvider(
-    dispatch_queue_t captureSessionQueue, FLTCamMediaSettingsProvider *mediaSettingsProvider) {
-  if (!mediaSettingsProvider) {
-    mediaSettingsProvider = [[FLTCamMediaSettingsProvider alloc] initWithFps:nil
-                                                                videoBitrate:nil
-                                                                audioBitrate:nil
-                                                                 enableAudio:true];
+FLTCam *FLTCreateCamWithCaptureSessionQueueAndMediaSettings(
+    dispatch_queue_t captureSessionQueue, FLTCamMediaSettings *mediaSettings,
+    FLTCamMediaSettingsAVWrapper *mediaSettingsAVWrapper) {
+  if (!mediaSettings) {
+    mediaSettings = [[FLTCamMediaSettings alloc] initWithFramesPerSecond:nil
+                                                            videoBitrate:nil
+                                                            audioBitrate:nil
+                                                             enableAudio:true];
+  }
+
+  if (!mediaSettingsAVWrapper) {
+    mediaSettingsAVWrapper = [[FLTCamMediaSettingsAVWrapper alloc] init];
   }
 
   id inputMock = OCMClassMock([AVCaptureDeviceInput class]);
@@ -40,7 +45,8 @@ FLTCam *FLTCreateCamWithCaptureSessionQueueAndProvider(
 
   id fltCam = [[FLTCam alloc] initWithCameraName:@"camera"
                                 resolutionPreset:@"medium"
-                           mediaSettingsProvider:mediaSettingsProvider
+                                   mediaSettings:mediaSettings
+                          mediaSettingsAVWrapper:mediaSettingsAVWrapper
                                      orientation:UIDeviceOrientationPortrait
                              videoCaptureSession:videoSessionMock
                              audioCaptureSession:audioSessionMock

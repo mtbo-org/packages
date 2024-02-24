@@ -302,42 +302,54 @@
 // Returns number value if provided and positive, or nil.
 // Used to parse values like framerates and bitrates, that are positive by nature.
 // nil allows to ignore unsupported values.
-+ (NSNumber *)positiveOrNil:(id)number error:(NSError **)error {
-  if (!number || [number isEqual:[NSNull null]]) {
++ (NSNumber *)positiveNumberValueOrNilForArgument:(NSString *)argument
+                                       fromMethod:(FlutterMethodCall *)flutterMethodCall
+                                            error:(NSError **)error {
+  id value = flutterMethodCall.arguments[argument];
+
+  if (!value || [value isEqual:[NSNull null]]) {
     return nil;
   }
 
-  if (![number isKindOfClass:[NSNumber class]]) {
+  if (![value isKindOfClass:[NSNumber class]]) {
     if (error) {
       *error = [NSError errorWithDomain:@"ArgumentError"
                                    code:0
-                               userInfo:@{NSLocalizedDescriptionKey : @"should be a number"}];
+                               userInfo:@{
+                                 NSLocalizedDescriptionKey :
+                                     [NSString stringWithFormat:@"%@ should be a number", argument]
+                               }];
     }
     return nil;
   }
 
-  NSNumber *value = (NSNumber *)number;
+  NSNumber *number = (NSNumber *)value;
 
-  if (isnan([value doubleValue])) {
+  if (isnan([number doubleValue])) {
     if (error) {
       *error = [NSError errorWithDomain:@"ArgumentError"
                                    code:0
-                               userInfo:@{NSLocalizedDescriptionKey : @"should not be a nan"}];
+                               userInfo:@{
+                                 NSLocalizedDescriptionKey :
+                                     [NSString stringWithFormat:@"%@ should not be a nan", argument]
+                               }];
     }
     return nil;
   }
 
-  if ([value doubleValue] <= 0.0) {
+  if ([number doubleValue] <= 0.0) {
     if (error) {
-      *error =
-          [NSError errorWithDomain:@"ArgumentError"
-                              code:0
-                          userInfo:@{NSLocalizedDescriptionKey : @"should be a positive number"}];
+      *error = [NSError errorWithDomain:@"ArgumentError"
+                                   code:0
+                               userInfo:@{
+                                 NSLocalizedDescriptionKey : [NSString
+                                     stringWithFormat:@"%@ should be a positive number", argument]
+                               }];
     }
     return nil;
   }
 
-  return value;
+  return number;
 }
 
 - (void)createCameraOnSessionQueueWithCreateMethodCall:(FlutterMethodCall *)createMethodCall
@@ -351,21 +363,25 @@
 
     NSError *error;
 
-    NSNumber *fps = [CameraPlugin positiveOrNil:createMethodCall.arguments[@"fps"] error:&error];
+    NSNumber *framesPerSecond = [CameraPlugin positiveNumberValueOrNilForArgument:@"fps"
+                                                                       fromMethod:createMethodCall
+                                                                            error:&error];
     if (error) {
       [result sendError:error];
       return;
     }
 
-    NSNumber *videoBitrate = [CameraPlugin positiveOrNil:createMethodCall.arguments[@"videoBitrate"]
-                                                   error:&error];
+    NSNumber *videoBitrate = [CameraPlugin positiveNumberValueOrNilForArgument:@"videoBitrate"
+                                                                    fromMethod:createMethodCall
+                                                                         error:&error];
     if (error) {
       [result sendError:error];
       return;
     }
 
-    NSNumber *audioBitrate = [CameraPlugin positiveOrNil:createMethodCall.arguments[@"audioBitrate"]
-                                                   error:&error];
+    NSNumber *audioBitrate = [CameraPlugin positiveNumberValueOrNilForArgument:@"audioBitrate"
+                                                                    fromMethod:createMethodCall
+                                                                         error:&error];
     if (error) {
       [result sendError:error];
       return;
@@ -373,15 +389,18 @@
 
     NSString *resolutionPreset = createMethodCall.arguments[@"resolutionPreset"];
     NSNumber *enableAudio = createMethodCall.arguments[@"enableAudio"];
-    FLTCamMediaSettingsProvider *mediaSettingsProvider =
-        [[FLTCamMediaSettingsProvider alloc] initWithFps:fps
-                                            videoBitrate:videoBitrate
-                                            audioBitrate:audioBitrate
-                                             enableAudio:[enableAudio boolValue]];
+    FLTCamMediaSettings *mediaSettings =
+        [[FLTCamMediaSettings alloc] initWithFramesPerSecond:framesPerSecond
+                                                videoBitrate:videoBitrate
+                                                audioBitrate:audioBitrate
+                                                 enableAudio:[enableAudio boolValue]];
+    FLTCamMediaSettingsAVWrapper *mediaSettingsAVWrapper =
+        [[FLTCamMediaSettingsAVWrapper alloc] init];
 
     FLTCam *cam = [[FLTCam alloc] initWithCameraName:cameraName
                                     resolutionPreset:resolutionPreset
-                               mediaSettingsProvider:mediaSettingsProvider
+                                       mediaSettings:mediaSettings
+                              mediaSettingsAVWrapper:mediaSettingsAVWrapper
                                          orientation:[[UIDevice currentDevice] orientation]
                                  captureSessionQueue:strongSelf.captureSessionQueue
                                                error:&error];

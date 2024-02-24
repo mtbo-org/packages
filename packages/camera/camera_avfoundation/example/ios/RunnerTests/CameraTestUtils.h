@@ -8,12 +8,13 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// Creates an `FLTCam` that runs its capture session operations on a given queue.
 /// @param captureSessionQueue the capture session queue
-/// @param mediaSettingsProvider provider to perform media settings operations (for unit test
+/// @param mediaSettings media settings configuration parameters
+/// @param mediaSettingsAVWrapper provider to perform media settings operations (for unit test
 /// dependency injection).
 /// @return an FLTCam object.
-extern FLTCam *_Nullable FLTCreateCamWithCaptureSessionQueueAndProvider(
-    dispatch_queue_t _Nullable captureSessionQueue,
-    FLTCamMediaSettingsProvider *_Nullable mediaSettingsProvider);
+extern FLTCam *_Nullable FLTCreateCamWithCaptureSessionQueueAndMediaSettings(
+    dispatch_queue_t _Nullable captureSessionQueue, FLTCamMediaSettings *_Nullable mediaSettings,
+    FLTCamMediaSettingsAVWrapper *_Nullable mediaSettingsAVWrapper);
 
 extern FLTCam *FLTCreateCamWithCaptureSessionQueue(dispatch_queue_t captureSessionQueue);
 
