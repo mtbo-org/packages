@@ -249,7 +249,7 @@ static const bool gTestEnableAudio = YES;
 
 - (AVAssetWriterInput *)assetWriterVideoInputWithOutputSettings:
     (nullable NSDictionary<NSString *, id> *)outputSettings {
-  if ([outputSettings[AVVideoCompressionPropertiesKey] isKindOfClass:NSMutableDictionary.class]) {
+  if ([outputSettings[AVVideoCompressionPropertiesKey] isKindOfClass:[NSMutableDictionary class]) {
     NSDictionary *compressionProperties = outputSettings[AVVideoCompressionPropertiesKey];
 
     if ([compressionProperties[AVVideoAverageBitRateKey] isEqual:@(gTestVideoBitrate)] &&
