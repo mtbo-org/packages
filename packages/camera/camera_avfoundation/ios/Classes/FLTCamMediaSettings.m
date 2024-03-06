@@ -8,7 +8,7 @@
 
 #define AssertPositiveNumberOrNil(param)                                                        \
   if (param != nil) {                                                                           \
-    NSAssert([param isKindOfClass:NSNumber.class], @"%@ is not a number: %@", @ #param, param); \
+    NSAssert([param isKindOfClass:[NSNumber class]], @"%@ is not a number: %@", @ #param, param); \
     NSAssert(!isnan([param doubleValue]), @"%@ is NaN", @ #param);                              \
     NSAssert([param doubleValue] > 0, @"%@ is not positive: %@", @ #param, param);              \
   }
