@@ -126,7 +126,8 @@ NSString *const errorMethod = @"error";
                captureSessionQueue:(dispatch_queue_t)captureSessionQueue
                              error:(NSError **)error {
   return [self initWithResolutionPreset:resolutionPreset
-      enableAudio:enableAudio
+      mediaSettings:mediaSettings
+      mediaSettingsAVWrapper:mediaSettingsAVWrapper
       orientation:orientation
       videoCaptureSession:videoCaptureSession
       audioCaptureSession:videoCaptureSession
@@ -141,7 +142,8 @@ NSString *const errorMethod = @"error";
 }
 
 - (instancetype)initWithResolutionPreset:(NSString *)resolutionPreset
-                             enableAudio:(BOOL)enableAudio
+                           mediaSettings:(FLTCamMediaSettings *)mediaSettings
+                  mediaSettingsAVWrapper:(FLTCamMediaSettingsAVWrapper *)mediaSettingsAVWrapper
                              orientation:(UIDeviceOrientation)orientation
                      videoCaptureSession:(AVCaptureSession *)videoCaptureSession
                      audioCaptureSession:(AVCaptureSession *)audioCaptureSession

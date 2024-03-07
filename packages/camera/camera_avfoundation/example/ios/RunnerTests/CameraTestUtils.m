@@ -91,14 +91,19 @@ FLTCam *FLTCreateCamWithVideoCaptureSession(AVCaptureSession *captureSession,
   OCMStub([audioSessionMock addInputWithNoConnections:[OCMArg any]]);
   OCMStub([audioSessionMock canSetSessionPreset:[OCMArg any]]).andReturn(YES);
 
-  return [[FLTCam alloc] initWithCameraName:@"camera"
-                           resolutionPreset:resolutionPreset
-                                enableAudio:true
-                                orientation:UIDeviceOrientationPortrait
-                        videoCaptureSession:captureSession
-                        audioCaptureSession:audioSessionMock
-                        captureSessionQueue:dispatch_queue_create("capture_session_queue", NULL)
-                                      error:nil];
+  return
+      [[FLTCam alloc] initWithCameraName:@"camera"
+                        resolutionPreset:resolutionPreset
+                           mediaSettings:[[FLTCamMediaSettings alloc] initWithFramesPerSecond:nil
+                                                                                 videoBitrate:nil
+                                                                                 audioBitrate:nil
+                                                                                  enableAudio:true]
+                  mediaSettingsAVWrapper:[[FLTCamMediaSettingsAVWrapper alloc] init]
+                             orientation:UIDeviceOrientationPortrait
+                     videoCaptureSession:captureSession
+                     audioCaptureSession:audioSessionMock
+                     captureSessionQueue:dispatch_queue_create("capture_session_queue", NULL)
+                                   error:nil];
 }
 
 FLTCam *FLTCreateCamWithVideoDimensionsForFormat(
@@ -112,18 +117,22 @@ FLTCam *FLTCreateCamWithVideoDimensionsForFormat(
   OCMStub([audioSessionMock addInputWithNoConnections:[OCMArg any]]);
   OCMStub([audioSessionMock canSetSessionPreset:[OCMArg any]]).andReturn(YES);
 
-  return
-      [[FLTCam alloc] initWithResolutionPreset:resolutionPreset
-                                   enableAudio:true
-                                   orientation:UIDeviceOrientationPortrait
-                           videoCaptureSession:captureSession
-                           audioCaptureSession:audioSessionMock
-                           captureSessionQueue:dispatch_queue_create("capture_session_queue", NULL)
-                          captureDeviceFactory:^AVCaptureDevice *(void) {
-                            return captureDevice;
-                          }
-                      videoDimensionsForFormat:videoDimensionsForFormat
-                                         error:nil];
+  return [[FLTCam alloc]
+      initWithResolutionPreset:resolutionPreset
+                 mediaSettings:[[FLTCamMediaSettings alloc] initWithFramesPerSecond:nil
+                                                                       videoBitrate:nil
+                                                                       audioBitrate:nil
+                                                                        enableAudio:true]
+        mediaSettingsAVWrapper:[[FLTCamMediaSettingsAVWrapper alloc] init]
+                   orientation:UIDeviceOrientationPortrait
+           videoCaptureSession:captureSession
+           audioCaptureSession:audioSessionMock
+           captureSessionQueue:dispatch_queue_create("capture_session_queue", NULL)
+          captureDeviceFactory:^AVCaptureDevice *(void) {
+            return captureDevice;
+          }
+      videoDimensionsForFormat:videoDimensionsForFormat
+                         error:nil];
 }
 
 CMSampleBufferRef FLTCreateTestSampleBuffer(void) {

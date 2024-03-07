@@ -6,20 +6,21 @@
 
 @implementation FLTCamMediaSettings
 
-#define AssertPositiveNumberOrNil(param)                                                          \
-  if (param != nil) {                                                                             \
-    NSAssert([param isKindOfClass:[NSNumber class]], @"%@ is not a number: %@", @ #param, param); \
-    NSAssert(!isnan([param doubleValue]), @"%@ is NaN", @ #param);                                \
-    NSAssert([param doubleValue] > 0, @"%@ is not positive: %@", @ #param, param);                \
+NS_INLINE void AssertPositiveNumberOrNil(id param, const char *paramName) {
+  if (param != nil) {
+    NSCAssert([param isKindOfClass:[NSNumber class]], @"%s is not a number: %@", paramName, param);
+    NSCAssert(!isnan([param doubleValue]), @"%s is NaN", paramName);
+    NSCAssert([param doubleValue] > 0, @"%s is not positive: %@", paramName, param);
   }
+}
 
 - (instancetype)initWithFramesPerSecond:(nullable NSNumber *)framesPerSecond
                            videoBitrate:(nullable NSNumber *)videoBitrate
                            audioBitrate:(nullable NSNumber *)audioBitrate
                             enableAudio:(BOOL)enableAudio {
-  AssertPositiveNumberOrNil(framesPerSecond);
-  AssertPositiveNumberOrNil(videoBitrate);
-  AssertPositiveNumberOrNil(audioBitrate);
+  AssertPositiveNumberOrNil(framesPerSecond, "framesPerSecond");
+  AssertPositiveNumberOrNil(videoBitrate, "videoBitrate");
+  AssertPositiveNumberOrNil(audioBitrate, "audioBitrate");
 
   _framesPerSecond = framesPerSecond;
   _videoBitrate = videoBitrate;
