@@ -6,9 +6,9 @@
 
 @implementation FLTCamMediaSettings
 
-NS_INLINE void AssertPositiveNumberOrNil(id param, const char *paramName) {
+NS_INLINE void AssertPositiveNumberOrNil(NSNumber *_Nullable param,
+                                         const char *_Nonnull paramName) {
   if (param != nil) {
-    NSCAssert([param isKindOfClass:[NSNumber class]], @"%s is not a number: %@", paramName, param);
     NSCAssert(!isnan([param doubleValue]), @"%s is NaN", paramName);
     NSCAssert([param doubleValue] > 0, @"%s is not positive: %@", paramName, param);
   }

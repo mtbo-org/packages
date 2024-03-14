@@ -25,14 +25,14 @@ NS_ASSUME_NONNULL_BEGIN
  * @param outError The optional error.
  * @result A BOOL indicating whether the device was successfully locked for configuration.
  */
-- (BOOL)lockDevice:(nonnull AVCaptureDevice *)captureDevice error:(NSError **)outError;
+- (BOOL)lockDevice:(AVCaptureDevice *)captureDevice error:(NSError *_Nullable *_Nullable)outError;
 
 /**
  * @method unlockDevice:
  * @abstract Release exclusive control over device hardware properties.
  * @param captureDevice The capture device.
  */
-- (void)unlockDevice:(nonnull AVCaptureDevice *)captureDevice;
+- (void)unlockDevice:(AVCaptureDevice *)captureDevice;
 
 /**
  * @method beginConfigurationForSession:
@@ -40,7 +40,7 @@ NS_ASSUME_NONNULL_BEGIN
  * operations on a running session into atomic updates.
  * @param videoCaptureSession The video capture session.
  */
-- (void)beginConfigurationForSession:(nonnull AVCaptureSession *)videoCaptureSession;
+- (void)beginConfigurationForSession:(AVCaptureSession *)videoCaptureSession;
 
 /**
  * @method commitConfigurationForSession:
@@ -48,7 +48,7 @@ NS_ASSUME_NONNULL_BEGIN
  * operations on a running session into atomic updates.
  * @param videoCaptureSession The video capture session.
  */
-- (void)commitConfigurationForSession:(nonnull AVCaptureSession *)videoCaptureSession;
+- (void)commitConfigurationForSession:(AVCaptureSession *)videoCaptureSession;
 
 /**
  * @method setMinFrameDuration:onDevice:
@@ -57,7 +57,7 @@ NS_ASSUME_NONNULL_BEGIN
  * @param duration The frame duration.
  * @param captureDevice The capture device
  */
-- (void)setMinFrameDuration:(CMTime)duration onDevice:(nonnull AVCaptureDevice *)captureDevice;
+- (void)setMinFrameDuration:(CMTime)duration onDevice:(AVCaptureDevice *)captureDevice;
 
 /**
  * @method setMaxFrameDuration:onDevice:
@@ -66,7 +66,7 @@ NS_ASSUME_NONNULL_BEGIN
  * @param duration The frame duration.
  * @param captureDevice The capture device
  */
-- (void)setMaxFrameDuration:(CMTime)duration onDevice:(nonnull AVCaptureDevice *)captureDevice;
+- (void)setMaxFrameDuration:(CMTime)duration onDevice:(AVCaptureDevice *)captureDevice;
 
 /**
  * @method assetWriterAudioInputWithOutputSettings:
@@ -104,7 +104,7 @@ NS_ASSUME_NONNULL_BEGIN
  * @param output The `AVCaptureVideoDataOutput` instance.
  * @result A fully populated dictionary of keys and values that are compatible with AVAssetWriter.
  */
-- (NSDictionary<NSString *, id> *)
+- (nullable NSDictionary<NSString *, id> *)
     recommendedVideoSettingsForAssetWriterWithFileType:(AVFileType)fileType
                                              forOutput:(AVCaptureVideoDataOutput *)output;
 @end

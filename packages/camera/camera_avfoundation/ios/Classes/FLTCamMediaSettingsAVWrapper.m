@@ -6,7 +6,7 @@
 
 @implementation FLTCamMediaSettingsAVWrapper
 
-- (BOOL)lockDevice:(AVCaptureDevice *)captureDevice error:(NSError **)outError {
+- (BOOL)lockDevice:(AVCaptureDevice *)captureDevice error:(NSError *_Nullable *_Nullable)outError {
   return [captureDevice lockForConfiguration:outError];
 }
 
@@ -46,7 +46,7 @@
   [writer addInput:writerInput];
 }
 
-- (NSDictionary<NSString *, id> *)
+- (nullable NSDictionary<NSString *, id> *)
     recommendedVideoSettingsForAssetWriterWithFileType:(AVFileType)fileType
                                              forOutput:(AVCaptureVideoDataOutput *)output {
   return [output recommendedVideoSettingsForAssetWriterWithOutputFileType:fileType];

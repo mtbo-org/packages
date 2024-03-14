@@ -14,17 +14,17 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  * @property framesPerSecond optional frame rate of video being recorded.
  */
-@property(atomic, readonly, strong) NSNumber *framesPerSecond;
+@property(atomic, readonly, strong, nullable) NSNumber *framesPerSecond;
 
 /**
  * @property videoBitrate optional bitrate of video being recorded.
  */
-@property(atomic, readonly, strong) NSNumber *videoBitrate;
+@property(atomic, readonly, strong, nullable) NSNumber *videoBitrate;
 
 /**
  * @property audioBitrate optional bitrate of audio being recorded.
  */
-@property(atomic, readonly, strong) NSNumber *audioBitrate;
+@property(atomic, readonly, strong, nullable) NSNumber *audioBitrate;
 
 /**
  * @property enableAudio should be audio recorded.

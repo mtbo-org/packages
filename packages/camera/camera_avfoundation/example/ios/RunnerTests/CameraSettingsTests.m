@@ -269,7 +269,7 @@ static const bool gTestEnableAudio = YES;
 - (NSDictionary<NSString *, id> *)
     recommendedVideoSettingsForAssetWriterWithFileType:(AVFileType)fileType
                                              forOutput:(AVCaptureVideoDataOutput *)output {
-  return [[NSDictionary<NSString *, id> alloc] init];
+  return @{};
 }
 
 @end
