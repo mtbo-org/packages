@@ -505,7 +505,6 @@ NSString *const errorMethod = @"error";
         _videoCaptureSession.sessionPreset = AVCaptureSessionPresetLow;
         _previewSize = CGSizeMake(352, 288);
       } else {
-        // Assign passed by reference `error` only if requested by caller.
         if (error != nil) {
           *error =
               [NSError errorWithDomain:NSCocoaErrorDomain

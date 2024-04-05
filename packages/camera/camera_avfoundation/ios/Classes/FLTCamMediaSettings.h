@@ -27,7 +27,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property(atomic, readonly, strong, nullable) NSNumber *audioBitrate;
 
 /**
- * @property enableAudio should be audio recorded.
+ * @property enableAudio whether audio should be recorded.
  */
 @property(atomic, readonly) BOOL enableAudio;
 
@@ -39,14 +39,16 @@ NS_ASSUME_NONNULL_BEGIN
  * @param framesPerSecond optional frame rate of video being recorded.
  * @param videoBitrate optional bitrate of video being recorded.
  * @param audioBitrate optional bitrate of audio being recorded.
- * @param enableAudio should be audio recorded.
+ * @param enableAudio whether audio should be recorded.
  *
  * @result FLTCamMediaSettings instance
  */
 - (instancetype)initWithFramesPerSecond:(nullable NSNumber *)framesPerSecond
                            videoBitrate:(nullable NSNumber *)videoBitrate
                            audioBitrate:(nullable NSNumber *)audioBitrate
-                            enableAudio:(BOOL)enableAudio;
+                            enableAudio:(BOOL)enableAudio NS_DESIGNATED_INITIALIZER;
+
+- (instancetype)init NS_UNAVAILABLE;
 @end
 
 NS_ASSUME_NONNULL_END

@@ -4,28 +4,31 @@
 
 #import "FLTCamMediaSettings.h"
 
-@implementation FLTCamMediaSettings
-
-NS_INLINE void AssertPositiveNumberOrNil(NSNumber *_Nullable param,
-                                         const char *_Nonnull paramName) {
+static void AssertPositiveNumberOrNil(NSNumber *_Nullable param, const char *_Nonnull paramName) {
   if (param != nil) {
     NSCAssert(!isnan([param doubleValue]), @"%s is NaN", paramName);
     NSCAssert([param doubleValue] > 0, @"%s is not positive: %@", paramName, param);
   }
 }
 
+@implementation FLTCamMediaSettings
+
 - (instancetype)initWithFramesPerSecond:(nullable NSNumber *)framesPerSecond
                            videoBitrate:(nullable NSNumber *)videoBitrate
                            audioBitrate:(nullable NSNumber *)audioBitrate
                             enableAudio:(BOOL)enableAudio {
-  AssertPositiveNumberOrNil(framesPerSecond, "framesPerSecond");
-  AssertPositiveNumberOrNil(videoBitrate, "videoBitrate");
-  AssertPositiveNumberOrNil(audioBitrate, "audioBitrate");
+  self = [super init];
 
-  _framesPerSecond = framesPerSecond;
-  _videoBitrate = videoBitrate;
-  _audioBitrate = audioBitrate;
-  _enableAudio = enableAudio;
+  if (self != nil) {
+    AssertPositiveNumberOrNil(framesPerSecond, "framesPerSecond");
+    AssertPositiveNumberOrNil(videoBitrate, "videoBitrate");
+    AssertPositiveNumberOrNil(audioBitrate, "audioBitrate");
+
+    _framesPerSecond = framesPerSecond;
+    _videoBitrate = videoBitrate;
+    _audioBitrate = audioBitrate;
+    _enableAudio = enableAudio;
+  }
 
   return self;
 }
