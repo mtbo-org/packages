@@ -32,6 +32,7 @@ import io.flutter.plugins.camera.features.resolution.ResolutionPreset;
 import io.flutter.plugins.camera.features.sensororientation.SensorOrientationFeature;
 import io.flutter.plugins.camera.features.zoomlevel.ZoomLevelFeature;
 import io.flutter.view.TextureRegistry;
+import java.util.concurrent.ExecutorService;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -45,6 +46,7 @@ public class CameraTest_getRecordingProfileTest {
   private CameraProperties mockCameraProperties;
   private CameraFeatureFactory mockCameraFeatureFactory;
   private DartMessenger mockDartMessenger;
+  private ExecutorService mockExecutorService;
   private Camera camera;
   private CameraCaptureSession mockCaptureSession;
   private CaptureRequest.Builder mockPreviewRequestBuilder;
@@ -58,6 +60,8 @@ public class CameraTest_getRecordingProfileTest {
     mockCameraProperties = mock(CameraProperties.class);
     mockCameraFeatureFactory = new TestCameraFeatureFactory();
     mockDartMessenger = mock(DartMessenger.class);
+    mockExecutorService = mock(ExecutorService.class);
+
 
     final Activity mockActivity = mock(Activity.class);
     final TextureRegistry.SurfaceTextureEntry mockFlutterTexture =
@@ -71,6 +75,7 @@ public class CameraTest_getRecordingProfileTest {
             mockFlutterTexture,
             mockCameraFeatureFactory,
             mockDartMessenger,
+            mockExecutorService,
             mockCameraProperties,
             new Camera.VideoCaptureSettings(resolutionPreset, enableAudio));
   }

@@ -23,15 +23,18 @@ class CameraExampleHome extends StatefulWidget {
 
 class _CameraExampleHomeState extends State<CameraExampleHome>
     with WidgetsBindingObserver, TickerProviderStateMixin {
+  bool _active = true;
+
   CameraController? controller;
+
+  final StreamController<bool> recordingController = StreamController<bool>();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    WidgetsBinding.instance.addPostFrameCallback(
-        (_) async => onNewCameraSelected().then((_) => startVideoRecording()));
+    WidgetsBinding.instance.addPostFrameCallback((_) async => restartCamera());
   }
 
   @override
@@ -42,17 +45,12 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    final CameraController? cameraController = controller;
-
-    // App state changed before we got the chance to initialize.
-    if (cameraController == null || !cameraController.value.isInitialized) {
-      return;
-    }
-
     if (state == AppLifecycleState.inactive) {
-      cameraController.dispose();
+      _active = false;
+      unawaited(_disposeController());
     } else if (state == AppLifecycleState.resumed) {
-      _initializeCameraController(cameraController.description);
+      _active = true;
+      unawaited(restartCamera());
     }
   }
 
@@ -79,7 +77,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
               ),
             ),
           ),
-          _captureControlRowWidget(),
         ],
       );
 
@@ -101,26 +98,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
           ),
         )
     };
-  }
-
-  /// Display the control bar with buttons to take pictures and record videos.
-  Widget _captureControlRowWidget() {
-    final CameraController? cameraController = controller;
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: <Widget>[
-        IconButton(
-          icon: const Icon(Icons.stop),
-          color: Colors.red,
-          onPressed: cameraController != null &&
-                  cameraController.value.isInitialized &&
-                  cameraController.value.isRecordingVideo
-              ? onStopButtonPressed
-              : null,
-        ),
-      ],
-    );
   }
 
   Future<void> onNewCameraSelected() async {
@@ -145,6 +122,12 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     // If the controller is updated then update the UI.
     cameraController.addListener(() {
       if (mounted) {
+        if (controller?.value.isRecordingVideo ?? false) {
+          recordingController.add(true);
+        } else {
+          recordingController.add(false);
+        }
+
         setState(() {});
       }
     });
@@ -185,74 +168,56 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     }
   }
 
-  Future<void> onStopButtonPressed() async {
-    debugPrint('STOP 1');
-    await stopVideoRecording().then((XFile? file) {
-      debugPrint('STOP 2');
-      if (mounted) {
-        setState(() {});
-      }
-      if (file != null) {
-        debugPrint('Video recorded to ${file.path}');
-      }
-    }, onError: (_) => null).then((_) {
-      if (controller case final CameraController cameraController) {
-        setState(() {
-          controller = null;
-        });
-
-        debugPrint('STOP 3');
-        final Future<void> res = cameraController.dispose();
-        debugPrint('STOP 3.1');
-        return res;
-      }
-    }, onError: (_) => null)
-        //.then((_) => Future<void>.delayed(const Duration(milliseconds: 10)))
-        .then((_) {
-      debugPrint('STOP 4');
-      return onNewCameraSelected();
-    }, onError: (_) => null).then((_) {
-      debugPrint('STOP 5');
-      return startVideoRecording();
-    }, onError: (_) => null).then((_) => unawaited(onStopButtonPressed()));
-  }
-
-  // Future<void> onStopButtonPressed() async {
-  //   debugPrint('STOP 1');
-  //   if (controller case final CameraController cameraController) {
-  //     setState(() {
-  //       controller = null;
-  //     });
-  //
-  //     debugPrint('STOP 3');
-  //     return cameraController
-  //         .dispose()
-  //         .then((_) {
-  //           debugPrint('STOP 4');
-  //           return onNewCameraSelected();
-  //         })
-  //         .then((_) => Future<void>.delayed(const Duration(seconds: 1)))
-  //         .then((_) => unawaited(onStopButtonPressed()));
-  //   }
-  // }
-
-  Future<void> onPausePreviewButtonPressed() async {
-    final CameraController? cameraController = controller;
-
-    if (cameraController == null || !cameraController.value.isInitialized) {
-      _printError('Error: select a camera first.');
+  Future<void> restartCamera() async {
+    if (!_active) {
       return;
     }
 
-    if (cameraController.value.isPreviewPaused) {
-      await cameraController.resumePreview();
-    } else {
-      await cameraController.pausePreview();
-    }
-
-    if (mounted) {
-      setState(() {});
-    }
+    debugPrint('LOOP 1');
+    await onNewCameraSelected()
+        .then(
+          (_) {
+            debugPrint('LOOP 2');
+            return startVideoRecording();
+          },
+          onError: (_) => null,
+        )
+        .then((_) =>
+            // wait minmax(1, 10) seconds.
+            Future.any(<Future<void>>[
+              Future.wait(<Future<void>>[
+                _waitRecording(),
+                Future<void>.delayed(const Duration(seconds: 1)),
+              ]),
+              Future<void>.delayed(const Duration(seconds: 10)),
+            ]))
+        .then(
+          (_) {
+            debugPrint('LOOP 3');
+            return stopVideoRecording();
+          },
+          onError: (_) => null,
+        )
+        .then(
+          (XFile? file) {
+            debugPrint('LOOP 4');
+            if (mounted) {
+              setState(() {});
+            }
+            if (file != null) {
+              debugPrint('Video recorded to ${file.path}');
+            }
+          },
+          onError: (_) => null,
+        )
+        .then(
+          (_) {
+            return _disposeController();
+          },
+          onError: (_) => null,
+        )
+        //.then((_) => Future<void>.delayed(const Duration(milliseconds: 10)))
+        .then((_) => unawaited(restartCamera()));
   }
 
   Future<void> startVideoRecording() async {
@@ -293,6 +258,28 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
 
   void _showCameraException(CameraException e) =>
       _printError('Error: ${e.code}\n${e.description}');
+
+  Future<void> _disposeController() async {
+    if (controller case final CameraController cameraController) {
+      if (!cameraController.value.isInitialized) {
+        return;
+      }
+
+      setState(() {
+        controller = null;
+      });
+
+      return cameraController.dispose();
+    }
+  }
+
+  Future<void> _waitRecording() async {
+    await for (final bool value in recordingController.stream) {
+      if (value) {
+        return;
+      }
+    }
+  }
 }
 
 /// CameraApp is the Main Application.

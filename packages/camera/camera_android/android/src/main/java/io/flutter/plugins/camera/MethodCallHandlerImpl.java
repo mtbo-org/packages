@@ -354,20 +354,26 @@ final class MethodCallHandlerImpl implements MethodChannel.MethodCallHandler {
                 });
                 break;
             case "pausePreview":
-                taskScheduler.submit(() -> {
-                    try {
-                        camera.pausePreview();
-                        result.success(null);
-                    } catch (Exception e) {
-                        handleException(e, result);
-                    }
-                });
+                try {
+                    taskScheduler.submit(() -> {
+                        try {
+                            camera.pausePreview();
+                            result.success(null);
+                        } catch (Exception e) {
+                            handleException(e, result);
+                        }
+                    }).get();
+                } catch (Exception exception) {
+                }
                 break;
             case "resumePreview":
-                taskScheduler.submit(() -> {
-                    camera.resumePreview();
-                    result.success(null);
-                });
+                try {
+                    taskScheduler.submit(() -> {
+                        camera.resumePreview();
+                        result.success(null);
+                    }).get();
+                } catch (Exception exception) {
+                }
                 break;
             case "setDescriptionWhileRecording":
                 taskScheduler.submit(() -> {

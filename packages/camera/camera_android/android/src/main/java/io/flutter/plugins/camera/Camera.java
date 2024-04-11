@@ -283,7 +283,6 @@ class Camera
         }
 
         if (recordingFps != null && recordingFps.intValue() > 0) {
-
             final FpsRangeFeature fpsRange = new FpsRangeFeature(cameraProperties);
             fpsRange.setValue(new Range<Integer>(recordingFps, recordingFps));
             this.cameraFeatures.setFpsRange(fpsRange);
@@ -651,15 +650,7 @@ class Camera
             surfaces.add(mediaRecorder.getSurface());
             successCallback = () -> {
                 taskScheduler.submit(() -> {
-                    Log.i(TAG, "start 1");
                     mediaRecorder.start();
-                    while (8000 > captureFile.length()) {
-                        try {
-                            Thread.sleep(100);
-                        } catch (Exception e) {
-                        }
-                        Log.i(TAG, "start 2: " + captureFile.length());
-                    }
                 });
             };
         }
@@ -1395,11 +1386,8 @@ class Camera
     }
 
     public void close() {
-        Log.i(TAG, "close 1");
-
         stopAndReleaseCamera();
 
-        Log.i(TAG, "close 2");
         if (pictureImageReader != null) {
             pictureImageReader.close();
             pictureImageReader = null;
@@ -1408,17 +1396,19 @@ class Camera
             imageStreamReader.close();
             imageStreamReader = null;
         }
+
         if (mediaRecorder != null) {
-            mediaRecorder.reset();
+            try {
+                mediaRecorder.reset();
+            }
+            catch (Exception e){
+            }
+
             mediaRecorder.release();
             mediaRecorder = null;
         }
 
-        Log.i(TAG, "close 3");
         stopBackgroundThread();
-
-        Log.i(TAG, "close 4");
-
     }
 
     private void stopAndReleaseCamera() {
@@ -1495,12 +1485,9 @@ class Camera
     }
 
     public void dispose() {
-        Log.i(TAG, "dispose 1");
         close();
-
         flutterTexture.release();
         getDeviceOrientationManager().stop();
-        Log.i(TAG, "dispose 2");
     }
 
 
